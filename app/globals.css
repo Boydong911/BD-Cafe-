@@ -1,0 +1,97 @@
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* app/globals.css */
+
+@layer base {
+  :root {
+    --background: 30 35% 97%;
+    --foreground: 22 45% 12%;
+
+    --card: 34 20% 91%;
+    --card-foreground: 22 45% 12%;
+
+    --popover: 30 35% 97%;
+    --popover-foreground: 22 45% 12%;
+
+    --primary: 22 46% 20%;
+    --primary-foreground: 30 35% 97%;
+
+    --secondary: 34 20% 91%;
+    --secondary-foreground: 22 46% 20%;
+
+    --muted: 34 15% 90%;
+    --muted-foreground: 22 20% 40%;
+
+    --accent: 34 55% 55%;
+    --accent-foreground: 22 45% 15%;
+
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 30 35% 97%;
+
+    --border: 30 20% 85%;
+    --input: 30 20% 85%;
+    --ring: 34 55% 55%;
+
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    --background: 22 30% 8%;
+    --foreground: 30 35% 95%;
+
+    --card: 22 25% 12%;
+    --card-foreground: 30 35% 95%;
+
+    --popover: 22 25% 12%;
+    --popover-foreground: 30 35% 95%;
+
+    --primary: 34 55% 55%;
+    --primary-foreground: 22 30% 10%;
+
+    --secondary: 22 20% 18%;
+    --secondary-foreground: 30 35% 95%;
+
+    --muted: 22 20% 16%;
+    --muted-foreground: 30 15% 65%;
+
+    --accent: 34 55% 55%;
+    --accent-foreground: 22 30% 10%;
+
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 30 35% 95%;
+
+    --border: 22 20% 20%;
+    --input: 22 20% 20%;
+    --ring: 34 55% 55%;
+  }
+
+  .theme {
+    --font-heading: var(--font-sans);
+    --font-sans: var(--font-sans);
+  }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}

@@ -1,0 +1,187 @@
+"use client";
+
+import { useActionState, useState, type ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ImageOff, Loader2 } from "lucide-react";
+import { createMenuItem, updateMenuItem, type MenuFormState } from "@/app/admin/owner/menu/actions";
+import { MenuCustomizationEditor } from "@/components/admin/menu-customization-editor";
+import type { CategoryRow, MenuItemRow } from "@/types/menu";
+
+const initialState: MenuFormState = {};
+
+export function MenuForm({
+  mode,
+  categories,
+  initialData,
+}: {
+  mode: "create" | "edit";
+  categories: CategoryRow[];
+  initialData?: MenuItemRow;
+}) {
+  const router = useRouter();
+
+  const action =
+    mode === "edit" && initialData
+      ? updateMenuItem.bind(null, initialData.id)
+      : createMenuItem;
+
+  const [state, formAction, isPending] = useActionState(action, initialState);
+
+  const [isAvailable, setIsAvailable] = useState(initialData?.is_available ?? true);
+  const [categoryId, setCategoryId] = useState(initialData?.category_id ?? "none");
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    initialData?.image_url ?? null
+  );
+
+  function handleImageChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) setImagePreview(URL.createObjectURL(file));
+  }
+
+  return (
+    <form action={formAction} className="max-w-2xl space-y-6">
+      {state?.error && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {state.error}
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <Label htmlFor="image">Foto Menu</Label>
+        <div className="flex items-center gap-4">
+          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border bg-muted">
+            {imagePreview ? (
+              // eslint-disable-next-line @next/next/no-img-element -- preview lokal (blob:), bukan aset remote
+              <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <ImageOff className="h-6 w-6 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          <Input
+            id="image"
+            name="image"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleImageChange}
+            className="max-w-xs"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">JPG, PNG, atau WEBP. Maks 3MB.</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="name">Nama Menu</Label>
+        <Input
+          id="name"
+          name="name"
+          required
+          minLength={2}
+          defaultValue={initialData?.name}
+          placeholder="Contoh: Kopi Susu Gula Aren"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Deskripsi</Label>
+        <Textarea
+          id="description"
+          name="description"
+          defaultValue={initialData?.description ?? ""}
+          placeholder="Deskripsi singkat menu (opsional)"
+          rows={3}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="price">Harga Jual (Rp)</Label>
+          <Input
+            id="price"
+            name="price"
+            type="number"
+            min={0}
+            step={500}
+            required
+            defaultValue={initialData?.price}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="cost_price">HPP (Rp)</Label>
+          <Input
+            id="cost_price"
+            name="cost_price"
+            type="number"
+            min={0}
+            step={100}
+            required
+            defaultValue={initialData?.cost_price}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="category_id">Kategori</Label>
+        <input type="hidden" name="category_id" value={categoryId === "none" ? "" : categoryId} />
+        <Select value={categoryId} onValueChange={setCategoryId}>
+          <SelectTrigger id="category_id">
+            <SelectValue placeholder="Pilih kategori" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Tanpa Kategori</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat.id} value={cat.id}>
+                {cat.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border p-3">
+        <div>
+          <p className="text-sm font-medium">Stok Tersedia</p>
+          <p className="text-xs text-muted-foreground">Matikan kalau menu ini sedang habis.</p>
+        </div>
+        <input type="hidden" name="is_available" value={isAvailable ? "on" : ""} />
+        <Switch checked={isAvailable} onCheckedChange={setIsAvailable} />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Opsi Kustomisasi</Label>
+        <p className="text-xs text-muted-foreground">
+          Contoh: Level Gula (Normal / Less Sugar), Extra Shot (+Rp 5.000). Kosongkan kalau
+          menu tidak punya opsi.
+        </p>
+        <MenuCustomizationEditor initialGroups={initialData?.customization_options ?? []} />
+      </div>
+
+      <div className="flex gap-2 pt-2">
+        <Button
+          type="submit"
+          disabled={isPending}
+          className="bg-primary text-primary-foreground hover:bg-primary/90"
+        >
+          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {mode === "create" ? "Simpan Menu" : "Perbarui Menu"}
+        </Button>
+        <Button type="button" variant="outline" onClick={() => router.back()}>
+          Batal
+        </Button>
+      </div>
+    </form>
+  );
+}
