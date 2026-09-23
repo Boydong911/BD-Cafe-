@@ -17,7 +17,7 @@ Lalu copy-kan semua file di paket ini ke dalam project (`app/`, `lib/`, `middlew
 3. Copy `.env.local.example` -> `.env.local`, isi dengan URL & anon key project (Settings > API).
    Untuk `SUPABASE_SERVICE_ROLE_KEY`, ambil dari halaman yang sama (JANGAN pernah commit / expose ke client).
 
-## 3. Buat akun Owner awal (boy123 / boboiboy123)
+## 3. Buat akun Owner awal 
 ```bash
 npx tsx scripts/seed-owner.ts
 ```
