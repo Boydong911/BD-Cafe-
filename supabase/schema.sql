@@ -300,3 +300,39 @@ $$;
 
 grant execute on function public.get_sales_report(text, timestamptz, timestamptz) to authenticated;
 grant execute on function public.get_top_menu(timestamptz, timestamptz, int) to authenticated;
+
+-- File: supabase/schema.sql (simpan juga di project kamu buat riwayat)
+
+create table if not exists public.tables (
+  id uuid primary key default gen_random_uuid(),
+  table_number text not null unique,
+  label text, -- opsional, misal "Dekat Jendela", "VIP"
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+-- Aktifkan RLS
+alter table public.tables enable row level security;
+
+-- Siapa aja (termasuk customer yang scan QR) boleh baca meja yang aktif
+create policy "public read active tables"
+  on public.tables for select
+  using (is_active = true);
+
+-- Owner boleh baca semua (termasuk yang nonaktif) buat kebutuhan manage
+create policy "owner read all tables"
+  on public.tables for select
+  using (is_owner());
+
+-- Cuma owner yang boleh tambah/ubah/hapus
+create policy "owner insert tables"
+  on public.tables for insert
+  with check (is_owner());
+
+create policy "owner update tables"
+  on public.tables for update
+  using (is_owner());
+
+create policy "owner delete tables"
+  on public.tables for delete
+  using (is_owner());
