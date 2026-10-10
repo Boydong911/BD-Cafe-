@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { MenuCatalog } from "@/components/customer/menu-catalog";
+import { TableSessionSync } from "@/components/customer/table-session-sync";
 import type { MenuCardItem } from "@/components/customer/menu-card";
 import Image from "next/image";
 
@@ -25,19 +27,34 @@ export default async function MenuPage({
         .order("sort_order", { ascending: true }),
     ]);
 
-  const items: MenuCardItem[] = (menuItems ?? []).map((item) => ({
+    type MenuRow = {
+    id: string;
+    name: string;
+    description: string | null;
+    price: number | string;
+    image_url: string | null;
+    is_available: boolean;
+    categories: { name: string } | null;
+  };
+
+  const rows = (menuItems ?? []) as unknown as MenuRow[];
+
+  const items: MenuCardItem[] = rows.map((item) => ({
     id: item.id,
     name: item.name,
     description: item.description,
     price: Number(item.price),
     image_url: item.image_url,
     is_available: item.is_available,
-    // relasi categories bisa null (menu tanpa kategori) atau object tunggal
-    category_name: (item.categories as { name: string } | null)?.name ?? null,
+    category_name: item.categories?.name ?? null,
   }));
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 pb-24 sm:p-6">
+      <Suspense fallback={null}>
+        <TableSessionSync />
+      </Suspense>
+
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">BD Coffee Menu</h1>

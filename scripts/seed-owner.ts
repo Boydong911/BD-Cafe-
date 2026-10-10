@@ -1,7 +1,7 @@
 /**
  * Jalankan sekali di awal untuk membuat akun Owner default:
- *   Username: boy123
- *   Password: boboiboy123
+ *   Username: xxxx
+ *   Password: xxxx
  *
  * Password akan otomatis di-hash (bcrypt) oleh Supabase Auth saat
  * disimpan ke auth.users — kita tidak pernah menangani hashing manual.
@@ -22,8 +22,8 @@ loadEnvConfig(process.cwd());
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-const OWNER_USERNAME = "boy123";
-const OWNER_PASSWORD = "boboiboy123";
+const OWNER_USERNAME = "xxxx";
+const OWNER_PASSWORD = "xxxx";
 const OWNER_INTERNAL_EMAIL = `${OWNER_USERNAME}@cafe.internal`;
 
 async function main() {

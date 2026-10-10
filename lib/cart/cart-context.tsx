@@ -38,6 +38,8 @@ type CartContextValue = {
   setManualSession: (session: Omit<OrderSession, "isScanned">) => void;
   /** Dipanggil saat ada ?table= baru dari QR — reset keranjang kalau beda dari sesi aktif */
   applyScannedTable: (table: string) => void;
+  /** true setelah cart & sesi selesai dimuat dari localStorage */
+  hydrated: boolean;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -111,14 +113,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const applyScannedTable: CartContextValue["applyScannedTable"] = (table) => {
-    setSession((prev) => {
-      // Meja sama kayak sesi yang lagi aktif (misal reload halaman) — jangan reset
-      if (prev.isScanned && prev.tableNumber === table) return prev;
+    // Meja sama kayak sesi yang lagi aktif (misal reload halaman) — jangan reset
+    if (session.isScanned && session.tableNumber === table) return;
 
-      // Meja baru / beda dari sesi aktif — mulai pesanan baru dari nol
-      setItems([]);
-      return { orderType: "dine_in", tableNumber: table, isScanned: true };
-    });
+    // Meja baru / beda dari sesi aktif — mulai pesanan baru dari nol
+    setItems([]);
+    setSession({ orderType: "dine_in", tableNumber: table, isScanned: true });
   };
 
   const totalItems = useMemo(
@@ -143,6 +143,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         session,
         setManualSession,
         applyScannedTable,
+        hydrated,
       }}
     >
       {children}
