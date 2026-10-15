@@ -3,6 +3,7 @@
 .gitignore
 PROJECT-STRUCTURE.txt
 README.md
+Rangkuman-2026-10-16.md
 app/admin/kasir/actions.ts
 app/admin/kasir/layout.tsx
 app/admin/kasir/page.tsx
@@ -89,6 +90,7 @@ supabase/migrations/20261015-backup-menu-customization.sql
 supabase/migrations/20261015-fix-customizations-and-order-number.sql
 supabase/migrations/20261015-rollback.sql
 supabase/migrations/20261016-queue-number-on-confirmation.sql
+supabase/migrations/20261016-rls-qris-confirm.sql
 supabase/migrations/20261016-rollback-queue-number.sql
 supabase/schema.sql
 supabase/storage-policies.sql

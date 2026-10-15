@@ -12,11 +12,38 @@ function minutesSince(iso: string) {
 }
 
 /**
+ * Panggil RPC Postgres yang mengembalikan boolean.
+ *
+ * `types/database.types.ts` belum di-generate, jadi nama function RPC belum
+ * dikenal oleh tipe Supabase client (masuk kategori `never` yang sama seperti
+ * error `never` lain di project ini). Cast di sini mengisolasi masalahnya di
+ * satu tempat — nanti cukup regenerate types, cast ini bisa dihapus.
+ */
+async function callBooleanRpc(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  fn: "confirm_qris_payment" | "cancel_unpaid_order",
+  orderId: string
+): Promise<{ ok: boolean; error: string | null }> {
+  const result = (await supabase.rpc(fn, { p_order_id: orderId } as never)) as {
+    data: boolean | null;
+    error: { message: string } | null;
+  };
+
+  if (result.error) return { ok: false, error: result.error.message };
+  return { ok: result.data === true, error: null };
+}
+
+/**
  * Tombol "Sudah Bayar" di halaman QRIS.
+ *
+ * Memakai RPC `confirm_qris_payment` (SECURITY DEFINER) karena customer
+ * adalah pengguna 'anon' yang tidak punya hak UPDATE pada tabel orders.
+ * Function tersebut hanya boleh mengubah payment_status -> 'paid'.
  *
  * CATATAN KEAMANAN: aksi ini sengaja bisa dipanggil WITHOUT login, karena
  * yang menekan adalah customer-nya sendiri, bukan staff. Keamanannya
- * bersandar pada `order_id` berupa UUID acak yang tidak bisa ditebak.
+ * bersandar pada `order_id` berupa UUID acak yang tidak bisa ditebak,
+ * plus function yang hanya mengizinkan perubahan payment_status.
  *
  * ⚠️ Ini placeholder — saat QRIS asli terhubung ke payment gateway,
  *    status "paid" harus datang dari webhook gateway, BUKAN dari tombol ini.
@@ -28,20 +55,16 @@ export async function confirmQrisPayment(orderId: string): Promise<ActionResult>
 
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("orders")
-    .update({ payment_status: "paid" } as never)
-    .eq("id", orderId)
-    .eq("payment_method", "qris")
-    .eq("payment_status", "pending")
-    .neq("status", "cancelled")
-    .select("id, total, customer_name, status")
-    .single();
+  const { ok, error } = await callBooleanRpc(supabase, "confirm_qris_payment", orderId);
 
-  if (error || !data) {
+  if (error) {
+    return { success: false, error: "Gagal konfirmasi pembayaran." };
+  }
+
+  if (!ok) {
     return {
       success: false,
-      error: "Pesanan sudah dibayar atau dibatalkan.",
+      error: "Pesanan sudah dibayar, dibatalkan, atau bukan QRIS.",
     };
   }
 
@@ -61,38 +84,17 @@ export async function expireOrder(orderId: string): Promise<ActionResult> {
 
   const supabase = await createClient();
 
-  const { data: order } = await supabase
-    .from("orders")
-    .select("id, status, payment_status, created_at")
-    .eq("id", orderId)
-    .single();
-
-  if (!order) return { success: false, error: "Pesanan tidak ditemukan." };
-
-  const cur = order as unknown as {
-    id: string;
-    status: string;
-    payment_status: string;
-    created_at: string;
-  };
-
-  // Sudah dibayar / sudah diproses — jangan dibatalkan
-  if (cur.payment_status === "paid" || cur.status !== "pending") {
-    return { success: false, error: "Pesanan sudah diproses." };
-  }
-
-  const { error } = await supabase
-    .from("orders")
-    .update({ status: "cancelled" } as never)
-    .eq("id", orderId)
-    .eq("payment_status", "pending");
+  const { ok, error } = await callBooleanRpc(supabase, "cancel_unpaid_order", orderId);
 
   if (error) return { success: false, error: "Gagal membatalkan pesanan." };
 
   revalidatePath(`/order/${orderId}`);
   revalidatePath(`/order/${orderId}/pay`);
   revalidatePath("/admin/kasir");
-  return { success: true };
+
+  return ok
+    ? { success: true }
+    : { success: false, error: "Pesanan sudah diproses." };
 }
 
 /**
@@ -126,11 +128,7 @@ export async function getPaymentState(orderId: string) {
   const expired = minutesSince(cur.created_at) > PAYMENT_WINDOW_MINUTES;
 
   if (expired) {
-    await supabase
-      .from("orders")
-      .update({ status: "cancelled" } as never)
-      .eq("id", orderId)
-      .eq("payment_status", "pending");
+    await callBooleanRpc(supabase, "cancel_unpaid_order", orderId);
     revalidatePath(`/order/${orderId}`);
     revalidatePath("/admin/kasir");
   }
