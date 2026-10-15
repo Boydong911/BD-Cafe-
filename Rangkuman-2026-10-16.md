@@ -80,6 +80,7 @@ Semua path relatif terhadap `cafe-app/`.
 | 8 | `supabase/migrations/20261015-rollback.sql` | Pembatal migrasi 15-10 |
 | 9 | `supabase/migrations/20261016-queue-number-on-confirmation.sql` | Nomor antrean dibuat saat konfirmasi, bukan saat pesanan dibuat |
 | 10 | `supabase/migrations/20261016-rollback-queue-number.sql` | Pembatal migrasi 16-10 |
+| 11 | `supabase/migrations/20261016-rls-qris-confirm.sql` | Function `SECURITY DEFINER` agar customer (anon) bisa konfirmasi bayar & cancel tanpa bobol RLS |
 
 ### Catatan: file yang ada tapi belum pernah di-commit
 
@@ -423,6 +424,40 @@ bersamaan tidak mendapat nomor yang sama.
 
 ---
 
+### 6.4 Tombol "Sudah Bayar" gagal karena RLS
+
+**Gejala**: setelah migrasi queue & RLS dijalankan, customer menekan
+"Sudah Bayar" → tidak ada nomor antrean.
+
+**Penyebab**: `supabase/schema.sql:223`
+
+```sql
+create policy "orders_staff_update"
+  on public.orders for update using (public.is_staff())
+```
+
+Hanya **staff** boleh `UPDATE` tabel `orders`. Tapi customer adalah pengguna
+**anon** (belum login), sehingga Postgres menolak dengan error RLS.
+
+Tiga hal terpengaruh:
+- `confirmQrisPayment()` — tombol "Sudah Bayar"
+- `expireOrder()` — timer 15 menit habis
+- `getPaymentState()` — pembatalan otomatis saat halaman dibuka
+
+**Perbaikan**: dua function `SECURITY DEFINER` yang tightly-scoped.
+
+| Function | Yang boleh diubah | Syarat |
+|---|---|---|
+| `confirm_qris_payment(uuid)` | `payment_status` → `paid` | QRIS + pending + belum dibatal |
+| `cancel_unpaid_order(uuid)` | `status` → `cancelled` | pending + **belum** dibayar |
+
+Kolom lain (`total`, `table_number`, dll) **tidak bisa disentuh** dari sisi
+customer, karena kedua function tidak mengizinkan perubahan kolom lain.
+Izin juga dikunci dengan `revoke ... from public` — hanya `anon` dan
+`authenticated` yang boleh memanggil.
+
+---
+
 ## 8. CATATAN KEAMANAN
 
 ### `.env.local`
@@ -512,19 +547,38 @@ Semuanya **irrelevant**, aman diabaikan.
 
 ## 10. YANG MASIH TERSA
 
-1. **Jalankan 3 file migrasi SQL** di Supabase SQL Editor
-   (backup → fix → queue number)
+1. ~~Jalankan migrasi SQL~~ — ✅ **SELESAI** (semua 4 file sudah dijalankan
+   16-10-2026 tanpa error)
 2. **Generate Supabase types** — hilangkan error `never` yang banyak:
    ```
    npx supabase gen types typescript --project-id evjlpzxptvvyysglgsyy > types/database.types.ts
    ```
-3. **Hapus variabel Relevan dari `.env.example`** — bersihkan sisa copy-paste
+   Setelah itu cast workaround di `app/order/[orderId]/actions.ts`
+   (`callBooleanRpc`) bisa dihapus.
+3. **Hapus variabel relevan dari `.env.example`** — bersihkan sisa copy-paste
    dari project CRM (Telegram, Cron, Resend)
 4. **Ganti tombol "Sudah Bayar"** dengan webhook QRIS asli
 5. **Dashboard analytics** (Recharts) — belum dikerjakan
 6. **Manajemen kategori** di UI owner — backend belum ada
-7. **Test alur end-to-end** sebelum go-live
+7. **Update `BD-Coffee-Roadmap.md`** — status di sana sudah tidak sinkron
+   dengan kode (banyak fitur masih `🔲` padahal sudah jadi)
+8. **Test alur Tunai end-to-end** dengan login kasir (belum diuji)
 
 ---
 
-*Dokumen ini dibuat 2026-10-16 oleh sesi pengembangan BD Coffee.*
+## 11. RIWAYAT COMMIT
+
+```
+65db129  fix: izinkan customer konfirmasi pembayaran QRIS via RPC SECURITY DEFINER
+62ccc6e  feat: alur pembayaran QRIS/Tunai, nomor antrean, kustomisasi inline
+1e7f4b4  feat: dashboard kasir + fix table session
+f1c8c31  chore: sinkronkan tabel tables ke schema.sql
+```
+
+> Branch `main` masih 1 commit di depan `origin/main` — belum di-`push`.
+> Kalau mau amanin ke GitHub, pastikan repo private dulu.
+
+---
+
+*Dokumen ini dibuat 2026-10-16 oleh sesi pengembangan BD Coffee.
+Diperbarui setelah seluruh migrasi SQL berhasil dijalankan.*
