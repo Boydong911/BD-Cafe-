@@ -3,9 +3,21 @@ import { createClient } from "@/lib/supabase/server";
 import { MenuCatalog } from "@/components/customer/menu-catalog";
 import { TableSessionSync } from "@/components/customer/table-session-sync";
 import type { MenuCardItem } from "@/components/customer/menu-card";
+import { normalizeCustomizationGroups } from "@/lib/menu-customizations";
 import Image from "next/image";
 
 export const revalidate = 0; // selalu ambil data stok terbaru
+
+type MenuRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number | string;
+  image_url: string | null;
+  is_available: boolean;
+  customization_options: unknown;
+  categories: { name: string } | null;
+};
 
 export default async function MenuPage({
   searchParams,
@@ -19,23 +31,15 @@ export default async function MenuPage({
     await Promise.all([
       supabase
         .from("menu_items")
-        .select("id, name, description, price, image_url, is_available, categories(name)")
+        .select(
+          "id, name, description, price, image_url, is_available, customization_options, categories(name)"
+        )
         .order("name", { ascending: true }),
       supabase
         .from("categories")
         .select("id, name")
         .order("sort_order", { ascending: true }),
     ]);
-
-    type MenuRow = {
-    id: string;
-    name: string;
-    description: string | null;
-    price: number | string;
-    image_url: string | null;
-    is_available: boolean;
-    categories: { name: string } | null;
-  };
 
   const rows = (menuItems ?? []) as unknown as MenuRow[];
 
@@ -47,6 +51,7 @@ export default async function MenuPage({
     image_url: item.image_url,
     is_available: item.is_available,
     category_name: item.categories?.name ?? null,
+    customization_groups: normalizeCustomizationGroups(item.customization_options),
   }));
 
   return (

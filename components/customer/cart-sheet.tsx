@@ -22,7 +22,7 @@ const formatPrice = (price: number) =>
   }).format(price);
 
 export function CartSheet() {
-  const { items, updateQuantity, removeItem, totalItems, totalPrice, session, setManualSession } =
+  const { items, updateQuantity, removeItem, totalItems, totalPrice, session, setManualSession, setCustomerName } =
     useCart();
 
   return (
@@ -66,15 +66,21 @@ export function CartSheet() {
           <div className="flex-1 space-y-3 overflow-y-auto px-6 py-4">
             {items.map((item) => (
               <div
-                key={item.id}
+                key={item.lineId}
                 className="flex items-start justify-between gap-3 border-b border-white/10 pb-3"
               >
                 <div className="flex-1">
                   <p className="text-sm font-semibold">{item.name}</p>
-                  {item.description && (
-                    <p className="line-clamp-1 text-xs text-primary-foreground/50">
-                      {item.description}
+                  {item.customizations.length > 0 ? (
+                    <p className="text-xs text-primary-foreground/70">
+                      {item.customizations.map((c) => c.label).join(" · ")}
                     </p>
+                  ) : (
+                    item.description && (
+                      <p className="line-clamp-1 text-xs text-primary-foreground/50">
+                        {item.description}
+                      </p>
+                    )
                   )}
                   <div className="mt-1.5 flex items-center gap-2">
                     <span className="text-xs text-primary-foreground/70">
@@ -85,7 +91,7 @@ export function CartSheet() {
                         size="icon"
                         variant="outline"
                         className="h-5 w-5 border-white/30 bg-transparent text-primary-foreground hover:bg-white/10"
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.lineId, item.quantity - 1)}
                       >
                         <Minus className="h-2.5 w-2.5" />
                       </Button>
@@ -96,7 +102,7 @@ export function CartSheet() {
                         size="icon"
                         variant="outline"
                         className="h-5 w-5 border-white/30 bg-transparent text-primary-foreground hover:bg-white/10"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.lineId, item.quantity + 1)}
                       >
                         <Plus className="h-2.5 w-2.5" />
                       </Button>
@@ -108,7 +114,7 @@ export function CartSheet() {
                     {formatPrice(item.price * item.quantity)}
                   </p>
                   <button
-                    onClick={() => removeItem(item.id)}
+                    onClick={() => removeItem(item.lineId)}
                     className="text-primary-foreground/50 transition-colors hover:text-red-400"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -120,6 +126,23 @@ export function CartSheet() {
         )}
 
         <div className="space-y-3 border-t border-white/10 px-6 py-4">
+          {/* Pesanan Atas Nama — di atas blok meja */}
+          <div className="space-y-1.5">
+            <label
+              htmlFor="cart-customer-name"
+              className="text-xs font-medium text-primary-foreground/70"
+            >
+              Pesanan Atas Nama
+            </label>
+            <Input
+              id="cart-customer-name"
+              value={session.customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              placeholder="Nama yang mau dipanggil, mis. Budi"
+              className="border-white/30 bg-white/10 text-primary-foreground placeholder:text-primary-foreground/40"
+            />
+          </div>
+
           {session.isScanned ? (
             <p className="rounded-lg bg-white/10 px-3 py-2 text-sm font-medium">
               🪑 Meja Nomor <span className="font-bold">{session.tableNumber}</span>
@@ -153,14 +176,23 @@ export function CartSheet() {
                 </button>
               </div>
               {session.orderType === "dine_in" && (
-                <Input
-                  placeholder="Nomor meja (opsional — atau tanya kasir)"
-                  value={session.tableNumber ?? ""}
-                  onChange={(e) =>
-                    setManualSession({ orderType: "dine_in", tableNumber: e.target.value })
-                  }
-                  className="border-white/30 bg-white/10 text-primary-foreground placeholder:text-primary-foreground/40"
-                />
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="cart-table-number"
+                    className="text-xs font-medium text-primary-foreground/70"
+                  >
+                    Nomor Meja
+                  </label>
+                  <Input
+                    id="cart-table-number"
+                    placeholder="Contoh: 02 — atau scan QR meja di meja"
+                    value={session.tableNumber ?? ""}
+                    onChange={(e) =>
+                      setManualSession({ orderType: "dine_in", tableNumber: e.target.value })
+                    }
+                    className="border-white/30 bg-white/10 text-primary-foreground placeholder:text-primary-foreground/40"
+                  />
+                </div>
               )}
             </>
           )}

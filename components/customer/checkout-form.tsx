@@ -13,9 +13,12 @@ import { createOrder, type CheckoutInput } from "@/app/checkout/actions";
 type PaymentMethod = "qris" | "cash";
 
 export function CheckoutForm() {
-  const { items, totalPrice, clearCart, addItem, session, setManualSession } = useCart();
+  const { items, totalPrice, clearCart, addItem, session, setManualSession, setCustomerName } =
+    useCart();
 
-  const [customerName, setCustomerName] = useState("");
+  // Nama pemesan diisi di keranjang (kolom "Pesanan Atas Nama") lalu ikut ke sini
+  const customerName = session.customerName;
+
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +62,12 @@ export function CheckoutForm() {
       items: items.map((i) => ({
         menu_item_id: i.id,
         quantity: i.quantity,
-        selected_customizations: [],
+        // Harga kustomisasi tetap dihitung ulang di server — ini hanya pilihan customer
+        selected_customizations: i.customizations.map((c) => ({
+          name: c.name,
+          label: c.label,
+          price_delta: c.price_delta,
+        })),
       })),
     };
 
@@ -82,13 +90,22 @@ export function CheckoutForm() {
 
       <div className="space-y-2 rounded-lg border p-4">
         <p className="text-sm font-semibold">Ringkasan Pesanan</p>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {items.map((item) => (
-            <div key={item.id} className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
-                {item.quantity}x {item.name}
+            <div key={item.lineId} className="flex justify-between gap-3 text-sm">
+              <div className="min-w-0">
+                <p className="text-muted-foreground">
+                  {item.quantity}x {item.name}
+                </p>
+                {item.customizations.length > 0 && (
+                  <p className="text-xs text-muted-foreground/80">
+                    {item.customizations.map((c) => c.label).join(" · ")}
+                  </p>
+                )}
+              </div>
+              <span className="shrink-0">
+                Rp {(item.price * item.quantity).toLocaleString("id-ID")}
               </span>
-              <span>Rp {(item.price * item.quantity).toLocaleString("id-ID")}</span>
             </div>
           ))}
         </div>
@@ -106,13 +123,16 @@ export function CheckoutForm() {
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="customer_name">Nama Pemesan</Label>
+          <Label htmlFor="customer_name">Pesanan Atas Nama</Label>
           <Input
             id="customer_name"
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
-            placeholder="Nama kamu"
+            placeholder="Nama yang mau dipanggil, mis. Budi"
           />
+          <p className="text-xs text-muted-foreground">
+            Nama ini akan kami panggil saat pesananmu siap.
+          </p>
         </div>
 
         <div className="space-y-2">

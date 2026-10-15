@@ -9,13 +9,24 @@ import {
   type ReactNode,
 } from "react";
 
+export type SelectedCustomization = {
+  name: string; // nama grup, contoh: "Level Gula"
+  label: string; // pilihan, contoh: "Less Sugar"
+  price_delta: number;
+};
+
 export type CartItem = {
+  /** Kunci unik baris keranjang: menu + kombinasi kustomisasi */
+  lineId: string;
+  /** ID menu di database (menu_items.id) */
   id: string;
   name: string;
   description: string | null;
+  /** Harga satuan, sudah termasuk kustomisasi */
   price: number;
   imageUrl: string | null;
   quantity: number;
+  customizations: SelectedCustomization[];
 };
 
 export type OrderSession = {
@@ -23,21 +34,36 @@ export type OrderSession = {
   tableNumber: string | null;
   /** true kalau tableNumber didapat dari scan QR (bukan diketik manual) */
   isScanned: boolean;
+  /** "Pesanan Atas Nama" — nama yang dipanggil kasir saat pesanan siap */
+  customerName: string;
+};
+
+type AddItemInput = Omit<CartItem, "quantity" | "lineId" | "customizations"> & {
+  customizations?: SelectedCustomization[];
 };
 
 type CartContextValue = {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
-  updateQuantity: (id: string, quantity: number) => void;
-  removeItem: (id: string) => void;
+  addItem: (item: AddItemInput, quantity?: number) => void;
+  updateQuantity: (lineId: string, quantity: number) => void;
+  removeItem: (lineId: string) => void;
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
   session: OrderSession;
   /** Dipanggil dari toggle/Input manual di cart-sheet — TIDAK mengosongkan keranjang */
-  setManualSession: (session: Omit<OrderSession, "isScanned">) => void;
+  setManualSession: (session: Pick<OrderSession, "orderType" | "tableNumber">) => void;
+  /** Dipanggil dari kolom "Pesanan Atas Nama" di keranjang */
+  setCustomerName: (name: string) => void;
   /** Dipanggil saat ada ?table= baru dari QR — reset keranjang kalau beda dari sesi aktif */
   applyScannedTable: (table: string) => void;
+  /**
+   * Dipanggil saat halaman dibuka TANPA ?table= (mis. customer masuk lewat
+   * tombol "Lihat Menu" di landing page). Membersihkan sisa sesi meja hasil
+   * scan sebelumnya supaya customer bebas pilih Dine In / Take Away sendiri.
+   * Isian "Pesanan Atas Nama" tetap dipertahankan.
+   */
+  clearScannedTable: () => void;
   /** true setelah cart & sesi selesai dimuat dari localStorage */
   hydrated: boolean;
 };
@@ -50,32 +76,45 @@ const DEFAULT_SESSION: OrderSession = {
   orderType: "takeaway",
   tableNumber: null,
   isScanned: false,
+  customerName: "",
 };
+
+function buildLineId(id: string, customizations: SelectedCustomization[]) {
+  const signature = customizations
+    .map((c) => `${c.name}=${c.label}`)
+    .sort()
+    .join("|");
+  return `${id}::${signature}`;
+}
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [session, setSession] = useState<OrderSession>(DEFAULT_SESSION);
   const [hydrated, setHydrated] = useState(false);
 
-  // Load cart & sesi dari localStorage sekali pas mount
+  // Muat sesi dari localStorage sekali pas mount.
+  // Keranjang SENGAJA tidak dipulihkan: setiap kali halaman di-refresh /
+  // pull-to-refresh, pilihan menu direset supaya pesanan tidak tertinggal
+  // dari order sebelumnya. Nomor meja & nama tetap terbaca.
   useEffect(() => {
     try {
-      const rawItems = localStorage.getItem(CART_STORAGE_KEY);
-      if (rawItems) setItems(JSON.parse(rawItems));
+      localStorage.removeItem(CART_STORAGE_KEY); // bersihkan sisa versi lama
 
       const rawSession = localStorage.getItem(SESSION_STORAGE_KEY);
-      if (rawSession) setSession(JSON.parse(rawSession));
+      if (rawSession) {
+        const parsed = JSON.parse(rawSession) as Partial<OrderSession>;
+        setSession({
+          orderType: parsed.orderType ?? DEFAULT_SESSION.orderType,
+          tableNumber: parsed.tableNumber ?? null,
+          isScanned: parsed.isScanned ?? false,
+          customerName: parsed.customerName ?? "",
+        });
+      }
     } catch {
       // storage rusak/kosong, biarin default
     }
     setHydrated(true);
   }, []);
-
-  // Sync ke localStorage tiap kali cart berubah
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-  }, [items, hydrated]);
 
   // Sync ke localStorage tiap kali sesi berubah
   useEffect(() => {
@@ -84,32 +123,40 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [session, hydrated]);
 
   const addItem: CartContextValue["addItem"] = (item, quantity = 1) => {
+    const customizations = item.customizations ?? [];
+    const lineId = buildLineId(item.id, customizations);
+
     setItems((prev) => {
-      const existing = prev.find((i) => i.id === item.id);
+      const existing = prev.find((i) => i.lineId === lineId);
       if (existing) {
         return prev.map((i) =>
-          i.id === item.id ? { ...i, quantity: i.quantity + quantity } : i
+          i.lineId === lineId ? { ...i, quantity: i.quantity + quantity } : i
         );
       }
-      return [...prev, { ...item, quantity }];
+      return [...prev, { ...item, customizations, lineId, quantity }];
     });
   };
 
-  const updateQuantity: CartContextValue["updateQuantity"] = (id, quantity) => {
+  const updateQuantity: CartContextValue["updateQuantity"] = (lineId, quantity) => {
     setItems((prev) => {
-      if (quantity <= 0) return prev.filter((i) => i.id !== id);
-      return prev.map((i) => (i.id === id ? { ...i, quantity } : i));
+      if (quantity <= 0) return prev.filter((i) => i.lineId !== lineId);
+      return prev.map((i) => (i.lineId === lineId ? { ...i, quantity } : i));
     });
   };
 
-  const removeItem: CartContextValue["removeItem"] = (id) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+  const removeItem: CartContextValue["removeItem"] = (lineId) => {
+    setItems((prev) => prev.filter((i) => i.lineId !== lineId));
   };
 
   const clearCart = () => setItems([]);
 
   const setManualSession: CartContextValue["setManualSession"] = (next) => {
-    setSession({ ...next, isScanned: false });
+    // customerName dipertahankan — yang diubah di sini hanya tipe & meja
+    setSession((prev) => ({ ...prev, ...next, isScanned: false }));
+  };
+
+  const setCustomerName: CartContextValue["setCustomerName"] = (name) => {
+    setSession((prev) => ({ ...prev, customerName: name }));
   };
 
   const applyScannedTable: CartContextValue["applyScannedTable"] = (table) => {
@@ -118,7 +165,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     // Meja baru / beda dari sesi aktif — mulai pesanan baru dari nol
     setItems([]);
-    setSession({ orderType: "dine_in", tableNumber: table, isScanned: true });
+    setSession({
+      orderType: "dine_in",
+      tableNumber: table,
+      isScanned: true,
+      customerName: "",
+    });
+  };
+
+  const clearScannedTable: CartContextValue["clearScannedTable"] = () => {
+    // Hanya sesi hasil scan QR yang dibersihkan. Sesi yang customer pilih
+    // sendiri (Dine In / Take Away) tidak diutak-atik.
+    if (!session.isScanned) return;
+
+    setSession((prev) => ({
+      ...DEFAULT_SESSION,
+      customerName: prev.customerName,
+    }));
   };
 
   const totalItems = useMemo(
@@ -142,7 +205,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         totalPrice,
         session,
         setManualSession,
+        setCustomerName,
         applyScannedTable,
+        clearScannedTable,
         hydrated,
       }}
     >

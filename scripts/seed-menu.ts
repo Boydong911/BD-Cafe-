@@ -20,30 +20,23 @@ loadEnvConfig(process.cwd());
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-type CustomizationChoice = { label: string; price_delta: number };
-type CustomizationGroup = { name: string; choices: CustomizationChoice[] };
+// PENTING: pakai key "options" (bukan "choices") — ini yang dibaca seluruh
+// aplikasi di app/menu, app/checkout, dan components/customer.
+import type { CustomizationGroup } from "@/types/menu";
 
 const GULA_ICE_SHOT: CustomizationGroup[] = [
   {
     name: "Gula",
-    choices: [
-      { label: "Normal", price_delta: 0 },
-      { label: "Less Sugar", price_delta: 0 },
-      { label: "No Sugar", price_delta: 0 },
+    options: [
+      { label: "Non Gula", price_delta: 0 },
+      { label: "Gula", price_delta: 0 },
     ],
   },
   {
-    name: "Ice",
-    choices: [
-      { label: "Normal", price_delta: 0 },
-      { label: "Less Ice", price_delta: 0 },
-    ],
-  },
-  {
-    name: "Extra Shot",
-    choices: [
-      { label: "Tidak", price_delta: 0 },
-      { label: "+1 Shot", price_delta: 5000 },
+    name: "Suhu",
+    options: [
+      { label: "Ice", price_delta: 0 },
+      { label: "Hot", price_delta: 0 },
     ],
   },
 ];

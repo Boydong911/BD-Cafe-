@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import type { CustomizationGroup } from "@/types/menu";
 
 const cartItemSchema = z.object({
   menu_item_id: z.string().uuid(),
@@ -12,7 +13,7 @@ const cartItemSchema = z.object({
       z.object({
         name: z.string(),        // contoh: "Gula"
         label: z.string(),       // contoh: "Less Sugar"
-        price_delta: z.number().default(0),
+        price_delta: z.number().default(0), // DIABAIKAN — harga dihitung ulang dari DB
       })
     )
     .default([]),
@@ -49,7 +50,7 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
   const menuIds = items.map((i) => i.menu_item_id);
   const { data: menuItems, error: menuError } = await supabase
     .from("menu_items")
-    .select("id, name, price, cost_price, is_available")
+    .select("id, name, price, cost_price, is_available, customization_options")
     .in("id", menuIds);
 
   if (menuError || !menuItems || menuItems.length === 0) {
@@ -78,10 +79,35 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
       return { error: `Menu "${menu.name}" sedang habis, silakan hapus dari keranjang.` };
     }
 
-    const customizationDelta = item.selected_customizations.reduce(
-      (sum, c) => sum + (c.price_delta ?? 0),
-      0
-    );
+    // Validasi pilihan kustomisasi terhadap data DB — price_delta dari client DIABAIKAN
+    const groups = (
+      Array.isArray(menu.customization_options) ? menu.customization_options : []
+    ) as unknown as CustomizationGroup[];
+
+    const verified: { name: string; label: string; price_delta: number }[] = [];
+    for (const sel of item.selected_customizations) {
+      const group = groups.find((g) => g.name === sel.name);
+      // group?. saja tidak cukup: data rusak bisa punya grup tanpa key "options"
+      const options = Array.isArray(group?.options) ? group.options : [];
+      const option = options.find((o) => o.label === sel.label);
+      if (!group || !option) {
+        return {
+          error: `Pilihan kustomisasi untuk "${menu.name}" tidak valid, silakan pilih ulang.`,
+        };
+      }
+      verified.push({
+        name: group.name,
+        label: option.label,
+        price_delta: Number(option.price_delta) || 0,
+      });
+    }
+
+    // Satu pilihan per grup
+    if (new Set(verified.map((v) => v.name)).size !== verified.length) {
+      return { error: `Pilihan kustomisasi untuk "${menu.name}" tidak valid.` };
+    }
+
+    const customizationDelta = verified.reduce((sum, c) => sum + c.price_delta, 0);
     const unitPrice = Number(menu.price) + customizationDelta;
     const lineSubtotal = unitPrice * item.quantity;
     subtotal += lineSubtotal;
@@ -92,14 +118,15 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
       unit_price: unitPrice,
       unit_cost: Number(menu.cost_price),
       quantity: item.quantity,
-      selected_customizations: item.selected_customizations,
+      selected_customizations: verified,
       subtotal: lineSubtotal,
     });
   }
 
   const total = subtotal; // tempat menambah pajak/biaya layanan jika ada
 
-  // 1) Insert order
+  // Nomor antrean BELUM dibuat di sini — baru saat pembayaran terkonfirmasi.
+  // Cek constraint: dine_in wajib punya table_number, takeaway wajib null.
   const { data: order, error: orderError } = await supabase
     .from("orders")
     .insert({
@@ -131,5 +158,7 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
     return { error: `Gagal menyimpan detail pesanan: ${itemsError.message}` };
   }
 
-  redirect(`/order/${order.id}`);
+  // Belum bayar -> arahkan ke halaman pembayaran (QRIS / Tunai).
+  // Nomor antrean dibuat setelah pembayaran terkonfirmasi.
+  redirect(`/order/${order.id}/pay`);
 }

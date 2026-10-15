@@ -78,20 +78,17 @@ create table public.menu_items (
   cost_price              numeric(12,2) not null default 0 check (cost_price >= 0), -- HPP
   image_url               text,
   is_available            boolean not null default true,
-  -- Opsi kustomisasi disimpan sebagai JSON, contoh:
-  -- [
-  --   { "name": "Gula", "choices": [
-  --       {"label":"Normal","price_delta":0},
-  --       {"label":"Less Sugar","price_delta":0},
-  --       {"label":"No Sugar","price_delta":0}
+  -- Opsi kustomisasi disimpan sebagai JSON. WAJIB pakai key "options"
+  -- (bukan "choices") karena itulah yang dibaca seluruh aplikasi:
+  --   [
+  --   { "name": "Gula", "options": [
+  --       {"label":"Non Gula","price_delta":0},
+  --       {"label":"Gula","price_delta":0}
   --   ]},
-  --   { "name": "Ice", "choices": [
-  --       {"label":"Normal","price_delta":0},{"label":"Less Ice","price_delta":0}
-  --   ]},
-  --   { "name": "Extra Shot", "choices": [
-  --       {"label":"Tidak","price_delta":0},{"label":"+1 Shot","price_delta":5000}
+  --   { "name": "Suhu", "options": [
+  --       {"label":"Ice","price_delta":0},{"label":"Hot","price_delta":0}
   --   ]}
-  -- ]
+  --   ]
   customization_options   jsonb not null default '[]'::jsonb,
   created_at              timestamptz not null default now(),
   updated_at              timestamptz not null default now()
@@ -105,9 +102,9 @@ create index idx_menu_items_available on public.menu_items (is_available);
 -- ---------------------------------------------------------
 create table public.orders (
   id                uuid primary key default gen_random_uuid(),
-  order_number      text unique not null default
-                       ('ORD-' || to_char(now(), 'YYYYMMDD') || '-' ||
-                        lpad(floor(random() * 10000)::text, 4, '0')),
+  -- Nomor urut per hari: ORD-YYYYMMDD-01, -02, ... (diisi trigger, lihat
+  -- migrations/20261015-fix-customizations-and-order-number.sql)
+  order_number      text unique not null,
   customer_name     text not null,
   order_type        order_type not null,
   table_number      text,                    -- null jika takeaway
