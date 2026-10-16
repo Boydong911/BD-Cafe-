@@ -2,12 +2,13 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { loginAction, type LoginState } from "./actions";
+import Link from "next/link";
+import { ownerLoginAction, type LoginState } from "./actions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ShieldCheck } from "lucide-react";
 
 const initialState: LoginState = {};
 
@@ -20,16 +21,33 @@ function SubmitButton() {
   );
 }
 
-export default function LoginPage() {
-  const [state, formAction] = useActionState(loginAction, initialState);
+/**
+ * Halaman login OWNER (`/login`).
+ *
+ * Terpisah dari halaman login kasir (`/login/kasir`) supaya kasir tidak
+ * salah masuk ke halaman yang salah. Akun kasir yang nekat ke sini akan
+ * dialihkan otomatis oleh server action.
+ */
+export default function OwnerLoginPage() {
+  const [state, formAction] = useActionState(ownerLoginAction, initialState);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-10">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Login Kasir / Owner</CardTitle>
+          <div className="mb-1 flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-accent" />
+            <CardTitle>Login Owner</CardTitle>
+          </div>
           <CardDescription>
-            Masuk menggunakan akun staff untuk mengakses dashboard.
+            Khusus pemilik BD Coffee. Kasir cukup memakai{" "}
+            <Link
+              href="/login/kasir"
+              className="font-medium text-foreground underline underline-offset-2"
+            >
+              halaman login kasir
+            </Link>
+            .
           </CardDescription>
         </CardHeader>
         <CardContent>

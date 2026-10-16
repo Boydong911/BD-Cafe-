@@ -277,13 +277,20 @@ export type Database = {
           full_name: string | null
           id: string
           role: Database["public"]["Enums"]["user_role"]
-          updated_at: string
           username: string
         }[]
       }
       create_staff_account: {
         Args: {
           p_full_name?: string
+          p_password: string
+          p_username: string
+        }
+        Returns: string
+      }
+      register_staff_account: {
+        Args: {
+          p_full_name: string
           p_password: string
           p_username: string
         }

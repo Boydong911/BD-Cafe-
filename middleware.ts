@@ -11,11 +11,23 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isAdminRoute = pathname.startsWith("/admin");
-  const isLoginRoute = pathname === "/login";
 
-  // 1) Belum login tapi coba akses /admin/* -> tendang ke /login
+  // Ada DUA halaman login: /login (owner) dan /login/kasir (kasir).
+  // Plus /daftar untuk pendaftaran karyawan baru.
+  const isOwnerLoginRoute = pathname === "/login";
+  const isKasirLoginRoute = pathname === "/login/kasir";
+  const isDaftarRoute = pathname === "/daftar";
+  const isLoginRoute = isOwnerLoginRoute || isKasirLoginRoute || isDaftarRoute;
+
+  // 1) Belum login tapi coba akses /admin/* -> tendang ke halaman login
+  //    yang paling sesuai: kasir ke /admin/kasir, owner ke /admin/owner.
+  //    Default-nya /login/kasir karena sebagian besar staff adalah kasir.
   if (isAdminRoute && !user) {
-    const redirectUrl = new URL("/login", request.url);
+    const target =
+      pathname.startsWith("/admin/owner") || pathname === "/login"
+        ? "/login"
+        : "/login/kasir";
+    const redirectUrl = new URL(target, request.url);
     redirectUrl.searchParams.set("redirectedFrom", pathname);
     return NextResponse.redirect(redirectUrl);
   }
@@ -37,7 +49,12 @@ export async function middleware(request: NextRequest) {
       return response;
     }
 
-    // Sudah login & buka /login lagi -> lempar ke dashboard sesuai role
+    /*
+      Sudah login tapi masih buka halaman login / pendaftaran -> lempar ke
+      dashboard sesuai role. Halaman login kasirpun begitu, supaya kasir yang
+      klik link "Daftar" tapi sebenarnya sudah punya sesi tidak terjebak di
+      halaman daftar.
+    */
     if (isLoginRoute) {
       const target = profile.role === "owner" ? "/admin/owner" : "/admin/kasir";
       return NextResponse.redirect(new URL(target, request.url));

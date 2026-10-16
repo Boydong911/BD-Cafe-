@@ -15,6 +15,7 @@
 -- CARA PAKAI: Supabase Dashboard -> SQL Editor -> New query -> paste -> Run
 -- =========================================================
 
+drop function if exists public.register_staff_account(text, text, text);
 drop function if exists public.delete_staff_account(uuid);
 drop function if exists public.update_staff_profile(uuid, text);
 drop function if exists public.reset_staff_password(uuid, text);
@@ -28,7 +29,8 @@ drop function if exists public._bd_require_owner();
 select proname
 from pg_proc
 where proname in (
-  'list_staff', 'create_staff_account', 'reset_staff_password',
-  'update_staff_profile', 'delete_staff_account', '_bd_require_owner'
+  'list_staff', 'create_staff_account', 'register_staff_account',
+  'reset_staff_password', 'update_staff_profile', 'delete_staff_account',
+  '_bd_require_owner'
 );
 -- Hasilnya harus kosong.
