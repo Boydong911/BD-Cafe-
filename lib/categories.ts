@@ -15,6 +15,8 @@ export type CategoryGroup = {
   children: CategoryChild[];
   /** Total menu di grup ini (semua sub-kategorinya). */
   menuCount: number;
+  /** Urutan tampil; makin kecil makin di atas. */
+  sortOrder: number;
 };
 
 export type CategoryChild = {
@@ -76,7 +78,13 @@ export async function fetchCategoryTree(): Promise<CategoryGroup[]> {
       const children = (childrenOf.get(row.id) ?? []).sort(
         (a, b) => a.sortOrder - b.sortOrder
       );
-      return { id: row.id, name: row.name, children, menuCount: 0 };
+      return {
+        id: row.id,
+        name: row.name,
+        children,
+        menuCount: 0,
+        sortOrder: row.sort_order,
+      };
     });
 
   // Sub-kategori yatim (induknya tidak ada) -> jadikan grup supaya tidak hilang.
@@ -85,10 +93,21 @@ export async function fetchCategoryTree(): Promise<CategoryGroup[]> {
     (row) => row.parent_id && !knownParentIds.has(row.parent_id)
   );
   for (const row of orphans) {
-    parents.push({ id: row.id, name: row.name, children: [], menuCount: 0 });
+    parents.push({
+      id: row.id,
+      name: row.name,
+      children: [],
+      menuCount: 0,
+      sortOrder: 999,
+    });
   }
 
-  return parents.sort((a, b) => a.name.localeCompare(b.name, "id"));
+  // Urutan ikut kolom `sort_order`, bukan alfabet. Owner mengatur urutannya di
+  // halaman Kategori (Minuman di atas Makanan), dan pilihan itu harus berlaku
+  // juga di filter — bukan diganti urutan abjad yang menimpanya.
+  return parents.sort(
+    (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "id")
+  );
 }
 
 /** Hitung jumlah menu per kategori (dipakai untuk badge jumlah di filter). */
@@ -126,4 +145,9 @@ export function attachCounts(
     );
     return { ...group, menuCount: total };
   });
+}
+
+/** Total menu di seluruh grup. */
+export function totalMenuCount(groups: CategoryGroup[]): number {
+  return groups.reduce((sum, group) => sum + group.menuCount, 0);
 }

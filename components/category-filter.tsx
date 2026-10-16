@@ -114,22 +114,33 @@ export function CategoryFilter({
       */}
       <div aria-live="polite">
         {activeGroupData && activeGroupData.children.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 border-l-2 border-border pl-3">
-            {activeGroupData.children.map((child) => (
-              <Button
-                key={child.id}
-                size="xs"
-                variant={activeChild === child.id ? "secondary" : "ghost"}
-                onClick={() =>
-                  // Klik lagi tombol aktif -> batal, kembali ke semua isi grup.
-                  onChildChange(activeChild === child.id ? null : child.id)
-                }
-                aria-pressed={activeChild === child.id}
-                className="shrink-0"
-              >
-                {child.name}
-              </Button>
-            ))}
+          <div className="flex gap-2 overflow-x-auto border-l-2 border-border pb-1 pl-3">
+            {activeGroupData.children.map((child) => {
+              const isActive = activeChild === child.id;
+
+              return (
+                <Button
+                  key={child.id}
+                  size="xs"
+                  // Selalu `ghost`, karena variant `secondary` tidak punya state
+                  // aktif yang mencolok. Bedakan aktif vs hover lewat class.
+                  variant="ghost"
+                  onClick={() =>
+                    // Klik lagi tombol aktif -> batal, kembali ke semua isi grup.
+                    onChildChange(isActive ? null : child.id)
+                  }
+                  aria-pressed={isActive}
+                  className={cn(
+                    "shrink-0 transition-colors",
+                    isActive
+                      ? "border border-accent bg-accent/15 font-semibold text-accent-foreground hover:bg-accent/25"
+                      : "text-muted-foreground hover:border-border hover:bg-accent/10 hover:text-accent-foreground"
+                  )}
+                >
+                  {child.name}
+                </Button>
+              );
+            })}
           </div>
         )}
       </div>
