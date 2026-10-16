@@ -241,6 +241,12 @@ alter publication supabase_realtime add table public.order_items;
 -- ---------------------------------------------------------
 
 -- Ringkasan omzet/HPP/profit per bucket waktu ('hour' | 'day' | 'week' | 'month')
+--
+-- PENTING: bucket dihitung dalam zona waktu WIB, bukan UTC.
+-- `date_trunc` pada timestamptz memakai TimeZone sesi Postgres (Supabase =
+-- UTC). Tanpa konversi di bawah, bucket "hari" bergeser 7 jam dan kolom
+-- "omzet hari ini" tidak cocok dengan nota yang benar-benar dicetak hari itu.
+-- Lihat migrasi 20261016-sales-report-wib.sql.
 create or replace function public.get_sales_report(
   p_period text,             -- 'hour' | 'day' | 'week' | 'month'
   p_start  timestamptz,
@@ -255,7 +261,8 @@ returns table (
 )
 language sql stable security definer set search_path = public as $$
   select
-    date_trunc(p_period, o.created_at) as bucket,
+    date_trunc(p_period, o.created_at at time zone 'Asia/Jakarta')
+      at time zone 'Asia/Jakarta' as bucket,
     coalesce(sum(oi.subtotal), 0) as omzet,
     coalesce(sum(oi.unit_cost * oi.quantity), 0) as cost,
     coalesce(sum(oi.subtotal - (oi.unit_cost * oi.quantity)), 0) as net_profit,

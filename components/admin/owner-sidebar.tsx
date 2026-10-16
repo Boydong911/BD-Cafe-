@@ -11,6 +11,7 @@ import {
   Grid3x3,
   Settings,
   LogOut,
+  Tags,
 } from "lucide-react";
 import { logoutAction } from "@/app/login/actions";
 
@@ -18,6 +19,7 @@ const navItems = [
   { href: "/admin/owner", label: "Ringkasan", icon: LayoutDashboard, exact: true },
   { href: "/admin/owner/penjualan", label: "Penjualan", icon: TrendingUp },
   { href: "/admin/owner/menu", label: "Menu & Produk", icon: Coffee },
+  { href: "/admin/owner/kategori", label: "Kategori", icon: Tags },
   { href: "/admin/owner/supply", label: "Supply", icon: Package },
   { href: "/admin/owner/meja", label: "Meja", icon: Grid3x3 },
 ];
