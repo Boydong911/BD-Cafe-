@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -14,6 +14,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import {
+  ALL,
+  CategoryFilter,
+  OUT_OF_STOCK,
+  type CategoryFilterGroup,
+} from "@/components/category-filter";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,10 +35,44 @@ import { ImageOff, Pencil, Trash2 } from "lucide-react";
 import { deleteMenuItem, toggleMenuStock } from "@/app/admin/owner/menu/actions";
 import type { MenuItemRow } from "@/types/menu";
 
-export function MenuTable({ items }: { items: MenuItemRow[] }) {
+export function MenuTable({
+  items,
+  groups,
+}: {
+  items: MenuItemRow[];
+  groups: CategoryFilterGroup[];
+}) {
   const [rows, setRows] = useState(items);
+  const [activeGroup, setActiveGroup] = useState<string>(ALL);
+  const [activeChild, setActiveChild] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  /** Peta kategori_id -> nama grup, supaya menu bisa difilter tanpa join ulang. */
+  const groupByCategoryId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const group of groups) {
+      for (const child of group.children) map.set(child.id, group.id);
+    }
+    return map;
+  }, [groups]);
+
+  const visibleRows = useMemo(() => {
+    if (activeGroup === ALL) return rows;
+    if (activeGroup === OUT_OF_STOCK) return rows.filter((r) => !r.is_available);
+
+    return rows.filter((r) => {
+      if (!r.category_id) return false;
+      if (groupByCategoryId.get(r.category_id) !== activeGroup) return false;
+      if (activeChild && r.category_id !== activeChild) return false;
+      return true;
+    });
+  }, [rows, activeGroup, activeChild, groupByCategoryId]);
+
+  const outOfStockCount = useMemo(
+    () => rows.filter((r) => !r.is_available).length,
+    [rows]
+  );
 
   function handleToggleStock(id: string, next: boolean) {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, is_available: next } : r)));
@@ -65,25 +105,42 @@ export function MenuTable({ items }: { items: MenuItemRow[] }) {
     );
   }
 
+  const isFiltered = activeGroup !== ALL || activeChild !== null;
+
   return (
     <div className="space-y-3">
+      <CategoryFilter
+        groups={groups}
+        activeGroup={activeGroup}
+        activeChild={activeChild}
+        onGroupChange={setActiveGroup}
+        onChildChange={setActiveChild}
+        outOfStockCount={outOfStockCount}
+      />
+
       {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
-      <div className="overflow-x-auto rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-16">Foto</TableHead>
-              <TableHead>Nama</TableHead>
-              <TableHead>Kategori</TableHead>
-              <TableHead className="text-right">Harga</TableHead>
-              <TableHead className="text-right">HPP</TableHead>
-              <TableHead className="text-center">Stok</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((item) => (
-              <TableRow key={item.id}>
+
+      {visibleRows.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+          Tidak ada menu di filter ini.
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-16">Foto</TableHead>
+                <TableHead>Nama</TableHead>
+                <TableHead>Kategori</TableHead>
+                <TableHead className="text-right">Harga</TableHead>
+                <TableHead className="text-right">HPP</TableHead>
+                <TableHead className="text-center">Stok</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visibleRows.map((item) => (
+                <TableRow key={item.id}>
                 <TableCell>
                   <div className="relative h-10 w-10 overflow-hidden rounded-md bg-muted">
                     {item.image_url ? (
@@ -162,10 +219,17 @@ export function MenuTable({ items }: { items: MenuItemRow[] }) {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {isFiltered && (
+        <p className="text-xs text-muted-foreground">
+          Menampilkan {visibleRows.length} dari {rows.length} menu.
+        </p>
+      )}
     </div>
   );
 }

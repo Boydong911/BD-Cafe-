@@ -4,6 +4,7 @@ import { MenuCatalog } from "@/components/customer/menu-catalog";
 import { TableSessionSync } from "@/components/customer/table-session-sync";
 import type { MenuCardItem } from "@/components/customer/menu-card";
 import { normalizeCustomizationGroups } from "@/lib/menu-customizations";
+import { fetchCategoryTree } from "@/lib/categories";
 import Image from "next/image";
 
 export const revalidate = 0; // selalu ambil data stok terbaru
@@ -16,7 +17,7 @@ type MenuRow = {
   image_url: string | null;
   is_available: boolean;
   customization_options: unknown;
-  categories: { name: string } | null;
+  categories: { id: string; name: string } | null;
 };
 
 export default async function MenuPage({
@@ -27,19 +28,15 @@ export default async function MenuPage({
   const { table } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: menuItems, error: menuError }, { data: categories }] =
-    await Promise.all([
-      supabase
-        .from("menu_items")
-        .select(
-          "id, name, description, price, image_url, is_available, customization_options, categories(name)"
-        )
-        .order("name", { ascending: true }),
-      supabase
-        .from("categories")
-        .select("id, name")
-        .order("sort_order", { ascending: true }),
-    ]);
+  const [{ data: menuItems, error: menuError }, categoryGroups] = await Promise.all([
+    supabase
+      .from("menu_items")
+      .select(
+        "id, name, description, price, image_url, is_available, customization_options, categories(id, name)"
+      )
+      .order("name", { ascending: true }),
+    fetchCategoryTree(),
+  ]);
 
   const rows = (menuItems ?? []) as unknown as MenuRow[];
 
@@ -50,6 +47,7 @@ export default async function MenuPage({
     price: Number(item.price),
     image_url: item.image_url,
     is_available: item.is_available,
+    category_id: item.categories?.id ?? null,
     category_name: item.categories?.name ?? null,
     customization_groups: normalizeCustomizationGroups(item.customization_options),
   }));
@@ -86,7 +84,7 @@ export default async function MenuPage({
       ) : (
         <MenuCatalog
           items={items}
-          categories={categories ?? []}
+          groups={categoryGroups}
           tableParam={table ?? null}
         />
       )}

@@ -8,11 +8,6 @@ export type CustomizationGroup = {
   options: CustomizationOption[];
 };
 
-export type CategoryRow = {
-  id: string;
-  name: string;
-};
-
 export type MenuItemRow = {
   id: string;
   name: string;

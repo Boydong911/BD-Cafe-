@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { MenuForm } from "@/components/admin/menu-form";
-import type { CategoryRow, MenuItemRow } from "@/types/menu";
+import { MenuForm, type MenuFormCategory } from "@/components/admin/menu-form";
+import { fetchCategoryTree } from "@/lib/categories";
+import type { MenuItemRow } from "@/types/menu";
 
 export default async function EditMenuPage({
   params,
@@ -11,15 +12,23 @@ export default async function EditMenuPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: menuData }, { data: categoryData }] = await Promise.all([
+  const [{ data: menuData }, groups] = await Promise.all([
     supabase.from("menu_items").select("*").eq("id", id).single(),
-    supabase.from("categories").select("id, name").order("sort_order"),
+    fetchCategoryTree(),
   ]);
 
   if (!menuData) notFound();
 
   const menuItem = menuData as unknown as MenuItemRow;
-  const categories = (categoryData ?? []) as unknown as CategoryRow[];
+
+  const categories: MenuFormCategory[] = groups.flatMap((group) =>
+    group.children.map((child) => ({
+      id: child.id,
+      name: child.name,
+      groupName: group.name,
+      isDrink: child.isDrink,
+    }))
+  );
 
   return (
     <div className="space-y-6">

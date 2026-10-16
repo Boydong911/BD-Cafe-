@@ -1,11 +1,20 @@
-import { createClient } from "@/lib/supabase/server";
 import { MenuForm } from "@/components/admin/menu-form";
-import type { CategoryRow } from "@/types/menu";
+import { fetchCategoryTree } from "@/lib/categories";
+import type { MenuFormCategory } from "@/components/admin/menu-form";
 
 export default async function NewMenuPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.from("categories").select("id, name").order("sort_order");
-  const categories = (data ?? []) as unknown as CategoryRow[];
+  const groups = await fetchCategoryTree();
+
+  // Menu hanya boleh menempel ke SUB-kategori, jadi kategori tingkat atas
+  // (Minuman / Makanan) sengaja tidak ikut dikirim ke form.
+  const categories: MenuFormCategory[] = groups.flatMap((group) =>
+    group.children.map((child) => ({
+      id: child.id,
+      name: child.name,
+      groupName: group.name,
+      isDrink: child.isDrink,
+    }))
+  );
 
   return (
     <div className="space-y-6">

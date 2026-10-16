@@ -20,64 +20,63 @@ loadEnvConfig(process.cwd());
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-// PENTING: pakai key "options" (bukan "choices") — ini yang dibaca seluruh
-// aplikasi di app/menu, app/checkout, dan components/customer.
-import type { CustomizationGroup } from "@/types/menu";
+// Opsi kustomisasi TIDAK ditulis manual di sini lagi. Sumber tunggalnya ada di
+// lib/menu-defaults.ts — sama persis dengan yang dipakai createMenuItem() saat
+// owner menambah menu lewat dashboard. Menu drink dapat Gula + Suhu,
+// menu food tidak dapat apa-apa.
+//
+// PENTING: grup memakai key "options" (bukan "choices") — itulah yang dibaca
+// seluruh aplikasi di app/menu, app/checkout, dan components/customer.
+import { defaultOptionsForCategory, toJsonOptions } from "../lib/menu-defaults";
 
-const GULA_ICE_SHOT: CustomizationGroup[] = [
-  {
-    name: "Gula",
-    options: [
-      { label: "Non Gula", price_delta: 0 },
-      { label: "Gula", price_delta: 0 },
-    ],
-  },
-  {
-    name: "Suhu",
-    options: [
-      { label: "Ice", price_delta: 0 },
-      { label: "Hot", price_delta: 0 },
-    ],
-  },
-];
+/**
+ * Struktur kategori dua tingkat.
+ *   parent_id = null  -> kategori tingkat atas (hanya untuk mengelompokkan)
+ *   parent_id = UUID   -> sub-kategori tempat menu benar-benar menempel
+ */
+const CATEGORY_TREE = [
+  { name: "Minuman", parent: null, isDrink: false, sortOrder: 1 },
+  { name: "Makanan", parent: null, isDrink: false, sortOrder: 2 },
 
-const CATEGORIES = ["Kopi Susu", "Manual Brew", "Non-Kopi", "Makanan Ringan"] as const;
+  { name: "Kopi", parent: "Minuman", isDrink: true, sortOrder: 10 },
+  { name: "Non-Kopi", parent: "Minuman", isDrink: true, sortOrder: 11 },
+  { name: "Manual Brew", parent: "Minuman", isDrink: true, sortOrder: 12 },
+
+  { name: "Berat", parent: "Makanan", isDrink: false, sortOrder: 20 },
+  { name: "Ringan", parent: "Makanan", isDrink: false, sortOrder: 21 },
+] as const;
 
 const MENU_ITEMS: Array<{
-  category: (typeof CATEGORIES)[number];
+  category: (typeof CATEGORY_TREE)[number]["name"];
   name: string;
   description: string;
   price: number;
   cost_price: number;
   is_available: boolean;
-  customization_options: CustomizationGroup[];
 }> = [
   {
-    category: "Kopi Susu",
+    category: "Kopi",
     name: "Kopi Susu Gula Aren",
     description: "Espresso, susu segar, dan gula aren asli — signature kami.",
     price: 22000,
     cost_price: 9000,
     is_available: true,
-    customization_options: GULA_ICE_SHOT,
   },
   {
-    category: "Kopi Susu",
+    category: "Kopi",
     name: "Caramel Macchiato",
     description: "Espresso dengan foam susu lembut dan saus karamel.",
     price: 26000,
     cost_price: 11000,
     is_available: true,
-    customization_options: GULA_ICE_SHOT,
   },
   {
-    category: "Kopi Susu",
+    category: "Kopi",
     name: "Butterscotch Latte",
     description: "Latte creamy dengan sentuhan butterscotch manis gurih.",
     price: 27000,
     cost_price: 11500,
     is_available: false,
-    customization_options: GULA_ICE_SHOT,
   },
   {
     category: "Manual Brew",
@@ -86,7 +85,6 @@ const MENU_ITEMS: Array<{
     price: 28000,
     cost_price: 12000,
     is_available: true,
-    customization_options: [],
   },
   {
     category: "Manual Brew",
@@ -95,7 +93,6 @@ const MENU_ITEMS: Array<{
     price: 15000,
     cost_price: 6000,
     is_available: true,
-    customization_options: [],
   },
   {
     category: "Non-Kopi",
@@ -104,7 +101,6 @@ const MENU_ITEMS: Array<{
     price: 25000,
     cost_price: 10500,
     is_available: true,
-    customization_options: GULA_ICE_SHOT,
   },
   {
     category: "Non-Kopi",
@@ -113,25 +109,22 @@ const MENU_ITEMS: Array<{
     price: 24000,
     cost_price: 10000,
     is_available: true,
-    customization_options: [],
   },
   {
-    category: "Makanan Ringan",
+    category: "Ringan",
     name: "Croissant Almond",
     description: "Croissant renyah dengan taburan almond panggang.",
     price: 18000,
     cost_price: 8000,
     is_available: true,
-    customization_options: [],
   },
   {
-    category: "Makanan Ringan",
+    category: "Ringan",
     name: "French Fries",
     description: "Kentang goreng renyah dengan saus sambal & mayo.",
     price: 17000,
     cost_price: 6500,
     is_available: true,
-    customization_options: [],
   },
 ];
 
@@ -146,35 +139,63 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // 1) Pastikan semua kategori ada (insert kalau belum)
+  // 1) Pastikan semua kategori ada (insert kalau belum).
+  //    Diurutkan dua tahap supaya induk selalu dibuat sebelum sub-kategori —
+  //    foreign key parent_id butuh id induknya sudah ada.
   const categoryIdByName = new Map<string, string>();
+  const categoryIsDrink = new Map<string, boolean>();
 
-  for (let i = 0; i < CATEGORIES.length; i++) {
-    const name = CATEGORIES[i];
+  const ordered = [
+    ...CATEGORY_TREE.filter((c) => c.parent === null),
+    ...CATEGORY_TREE.filter((c) => c.parent !== null),
+  ];
 
+  for (const spec of ordered) {
     const { data: existing, error: findError } = await supabaseAdmin
       .from("categories")
       .select("id")
-      .eq("name", name)
+      .eq("name", spec.name)
       .maybeSingle();
 
     if (findError) throw findError;
 
+    let id: string;
     if (existing) {
-      categoryIdByName.set(name, existing.id);
-      continue;
+      id = existing.id;
+    } else {
+      const { data: inserted, error: insertError } = await supabaseAdmin
+        .from("categories")
+        .insert({
+          name: spec.name,
+          sort_order: spec.sortOrder,
+          is_drink: spec.isDrink,
+        })
+        .select("id")
+        .single();
+
+      if (insertError) throw insertError;
+      id = inserted.id;
+      console.log(`✅ Kategori dibuat: ${spec.name}`);
     }
 
-    const { data: inserted, error: insertError } = await supabaseAdmin
+    categoryIdByName.set(spec.name, id);
+    categoryIsDrink.set(spec.name, spec.isDrink);
+  }
+
+  // Sambungkan sub-kategori ke induknya (aman dijalankan berulang).
+  for (const spec of CATEGORY_TREE) {
+    if (!spec.parent) continue;
+
+    const parentId = categoryIdByName.get(spec.parent);
+    const childId = categoryIdByName.get(spec.name);
+    if (!parentId || !childId) continue;
+
+    const { error: linkError } = await supabaseAdmin
       .from("categories")
-      .insert({ name, sort_order: i })
-      .select("id")
-      .single();
+      .update({ parent_id: parentId, is_drink: spec.isDrink })
+      .eq("id", childId);
 
-    if (insertError) throw insertError;
-
-    categoryIdByName.set(name, inserted.id);
-    console.log(`✅ Kategori dibuat: ${name}`);
+    if (linkError) throw linkError;
   }
 
   // 2) Insert menu item kalau nama belum ada
@@ -192,6 +213,9 @@ async function main() {
       continue;
     }
 
+    // Opsi kustomisasi ikut kategori: drink -> Gula + Suhu, makanan -> [].
+    const isDrink = categoryIsDrink.get(item.category) ?? false;
+
     const { error: insertError } = await supabaseAdmin.from("menu_items").insert({
       category_id: categoryIdByName.get(item.category)!,
       name: item.name,
@@ -200,7 +224,7 @@ async function main() {
       cost_price: item.cost_price,
       image_url: null,
       is_available: item.is_available,
-      customization_options: item.customization_options,
+      customization_options: toJsonOptions(defaultOptionsForCategory(isDrink)),
     });
 
     if (insertError) throw insertError;

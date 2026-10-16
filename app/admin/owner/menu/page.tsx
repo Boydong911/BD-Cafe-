@@ -3,17 +3,20 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { MenuTable } from "@/components/admin/menu-table";
+import { fetchCategoryTree } from "@/lib/categories";
 import type { MenuItemRow } from "@/types/menu";
 
 export default async function OwnerMenuPage() {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("menu_items")
-    .select("*, categories(name)")
-    .order("created_at", { ascending: false });
+  const [{ data, error }, categoryGroups] = await Promise.all([
+    supabase
+      .from("menu_items")
+      .select("*, categories(name)")
+      .order("created_at", { ascending: false }),
+    fetchCategoryTree(),
+  ]);
 
-  // Workaround bug generic-typing Supabase client (lihat learnings.md)
   const menuItems = (data ?? []) as unknown as MenuItemRow[];
 
   return (
@@ -35,7 +38,7 @@ export default async function OwnerMenuPage() {
 
       {error && <p className="text-sm text-destructive">Gagal memuat menu: {error.message}</p>}
 
-      <MenuTable items={menuItems} />
+      <MenuTable items={menuItems} groups={categoryGroups} />
     </div>
   );
 }

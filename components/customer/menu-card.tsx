@@ -17,6 +17,8 @@ export type MenuCardItem = {
   price: number;
   image_url: string | null;
   is_available: boolean;
+  /** Id kategori untuk filter dua tingkat (Minuman / Makanan -> sub-kategori). */
+  category_id: string | null;
   category_name: string | null;
   /** Grup kustomisasi yang sudah dibersihkan dari server (Gula / Suhu) */
   customization_groups: CustomizationGroup[];

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/database.types";
+import { defaultOptionsForCategory, toJsonOptions } from "@/lib/menu-defaults";
 
 const menuSchema = z.object({
   name: z.string().min(2, "Nama menu wajib diisi"),
@@ -13,7 +14,6 @@ const menuSchema = z.object({
   cost_price: z.coerce.number().min(0, "HPP tidak boleh negatif"),
   category_id: z.string().uuid().optional().or(z.literal("")),
   is_available: z.coerce.boolean().default(true),
-  customization_options: z.string().optional(), // JSON string dari form
 });
 
 export type MenuFormState = { error?: string };
@@ -100,21 +100,31 @@ export async function createMenuItem(
     }
   }
 
-  let customizationOptions: Json = [];
-  if (parsed.data.customization_options) {
-    try {
-      customizationOptions = JSON.parse(parsed.data.customization_options);
-    } catch {
-      return { error: "Format opsi kustomisasi tidak valid (harus JSON)." };
-    }
+  // Opsi kustomisasi ditentukan oleh KATEGORI menu, bukan oleh form:
+  // kategori minuman (categories.is_drink) -> Gula + Suhu; makanan -> [].
+  // Jadi tombol Gula/Ice-Hot selalu nempel di menu minuman tanpa perlu
+  // ada editor opsi kustomisasi di form.
+  const categoryId = parsed.data.category_id || null;
+  let isDrink = false;
+
+  if (categoryId) {
+    const { data: category } = await supabase
+      .from("categories")
+      .select("is_drink")
+      .eq("id", categoryId)
+      .single();
+
+    isDrink = category?.is_drink ?? false;
   }
+
+  const customizationOptions: Json = toJsonOptions(defaultOptionsForCategory(isDrink));
 
   const { error: insertError } = await supabase.from("menu_items").insert({
     name: parsed.data.name,
     description: parsed.data.description || null,
     price: parsed.data.price,
     cost_price: parsed.data.cost_price,
-    category_id: parsed.data.category_id || null,
+    category_id: categoryId,
     is_available: parsed.data.is_available,
     image_url: imageUrl,
     customization_options: customizationOptions,
@@ -141,7 +151,6 @@ export async function updateMenuItem(
     cost_price: formData.get("cost_price"),
     category_id: formData.get("category_id"),
     is_available: formData.get("is_available") === "on",
-    customization_options: formData.get("customization_options"),
   });
 
   if (!parsed.success) {
@@ -150,6 +159,9 @@ export async function updateMenuItem(
 
   const supabase = await createClient();
 
+  // `customization_options` SENGAJA tidak disentuh saat edit. Opsi itu sudah
+  // ditentukan kategori waktu menu dibuat, dan owner mungkin sudah menambah
+  // opsi khusus sendiri — menimpanya di sini akan menghapusnya.
   const updatePayload: Database["public"]["Tables"]["menu_items"]["Update"] = {
     name: parsed.data.name,
     description: parsed.data.description || null,
@@ -158,16 +170,6 @@ export async function updateMenuItem(
     category_id: parsed.data.category_id || null,
     is_available: parsed.data.is_available,
   };
-
-  if (parsed.data.customization_options) {
-    try {
-      updatePayload.customization_options = JSON.parse(
-        parsed.data.customization_options
-      );
-    } catch {
-      return { error: "Format opsi kustomisasi tidak valid (harus JSON)." };
-    }
-  }
 
   const file = formData.get("image") as File | null;
   if (file && file.size > 0) {

@@ -10,20 +10,37 @@ import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Check, ImageOff, Loader2, Upload } from "lucide-react";
+import { Check, Coffee, ImageOff, Loader2, Sandwich, Upload } from "lucide-react";
 import { createMenuItem, updateMenuItem, type MenuFormState } from "@/app/admin/owner/menu/actions";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/format";
-import type { CategoryRow, MenuItemRow } from "@/types/menu";
+import { describeOptions } from "@/lib/menu-defaults";
+import type { MenuItemRow } from "@/types/menu";
 
 /** Batas upload — harus sama dengan validasi di `uploadMenuImage()`. */
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
 const initialState: MenuFormState = {};
+
+/**
+ * Kategori yang boleh dipilih di form. Hanya SUB-kategori — kategori tingkat
+ * atas (Minuman / Makanan) tidak pernah jadi tujuan menu.
+ *
+ * `isDrink` ikut dibawa supaya form bisa memberi tahu owner apa yang akan
+ * menempel otomatis ke menu ini.
+ */
+export type MenuFormCategory = {
+  id: string;
+  name: string;
+  groupName: string;
+  isDrink: boolean;
+};
 
 export function MenuForm({
   mode,
@@ -31,7 +48,7 @@ export function MenuForm({
   initialData,
 }: {
   mode: "create" | "edit";
-  categories: CategoryRow[];
+  categories: MenuFormCategory[];
   initialData?: MenuItemRow;
 }) {
   const router = useRouter();
@@ -70,6 +87,21 @@ export function MenuForm({
   }, [imagePreview]);
 
   const fileTooBig = pickedFile ? pickedFile.size > MAX_IMAGE_BYTES : false;
+
+  /** Sub-kategori dikelompokkan per induk, supaya dropdown terbaca "Kopi — Kopi". */
+  const categoryGroups = categories.reduce<
+    { groupName: string; items: MenuFormCategory[] }[]
+  >((acc, category) => {
+    const existing = acc.find((g) => g.groupName === category.groupName);
+    if (existing) existing.items.push(category);
+    else acc.push({ groupName: category.groupName, items: [category] });
+    return acc;
+  }, []);
+
+  const selectedCategory =
+    categoryId === "none"
+      ? null
+      : (categories.find((c) => c.id === categoryId) ?? null);
 
   return (
     <form action={formAction} className="max-w-2xl space-y-6">
@@ -208,13 +240,42 @@ export function MenuForm({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">Tanpa Kategori</SelectItem>
-            {categories.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id}>
-                {cat.name}
-              </SelectItem>
+            {categoryGroups.map((group) => (
+              <SelectGroup key={group.groupName}>
+                <SelectLabel>{group.groupName}</SelectLabel>
+                {group.items.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             ))}
           </SelectContent>
         </Select>
+
+        {/* Pratinjau: owner langsung tahu tombol apa yang akan muncul di kartu menu. */}
+        {mode === "create" && selectedCategory && (
+          <p
+            className={cn(
+              "flex items-start gap-1.5 rounded-lg border px-2.5 py-2 text-xs",
+              selectedCategory.isDrink
+                ? "border-accent/40 bg-accent/10 text-foreground"
+                : "border-border bg-muted/50 text-muted-foreground"
+            )}
+          >
+            {selectedCategory.isDrink ? (
+              <Coffee className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
+            ) : (
+              <Sandwich className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            )}
+            <span>
+              {describeOptions(selectedCategory.isDrink)}{" "}
+              <span className="text-muted-foreground">
+                (Kategori {selectedCategory.groupName} · {selectedCategory.name})
+              </span>
+            </span>
+          </p>
+        )}
       </div>
 
       <div className="flex items-center justify-between rounded-lg border p-3">
