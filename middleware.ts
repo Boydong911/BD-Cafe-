@@ -43,10 +43,14 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL(target, request.url));
     }
 
-    // Cegah kasir mengakses area khusus owner, dan sebaliknya
+    // Cegah kasir mengakses area khusus owner, dan sebaliknya.
+    // Semua /admin/owner/* hanya untuk owner (termasuk /admin/owner/karyawan).
     if (pathname.startsWith("/admin/owner") && profile.role !== "owner") {
       return NextResponse.redirect(new URL("/admin/kasir", request.url));
     }
+
+    // Kasir DAN owner boleh buka /admin/kasir — owner sering perlu melihat
+    // tampilan kasir untuk memastikan alurnya benar.
     if (pathname.startsWith("/admin/kasir") && profile.role !== "kasir" && profile.role !== "owner") {
       return NextResponse.redirect(new URL("/admin/owner", request.url));
     }

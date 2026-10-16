@@ -43,8 +43,9 @@ export default async function OwnerSalesPage({
   const avgOrder = averageOrderValue(total);
   const hasData = rows.length > 0;
 
+  // `min-w-0` mencegah grid melebar melewati layar HP
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <div>
         <h1 className="font-serif text-2xl font-bold text-foreground">Penjualan</h1>
         <p className="text-sm text-muted-foreground">
@@ -55,7 +56,7 @@ export default async function OwnerSalesPage({
 
       <SalesFilter preset={preset} period={period} />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Total Omzet"
           value={rupiah(total.omzet)}
@@ -83,7 +84,8 @@ export default async function OwnerSalesPage({
         />
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      {/* `p-4 sm:p-5` + `overflow-hidden` supaya grafik tidak keluar dari kartu di HP */}
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
         <h2 className="font-serif text-lg font-semibold text-foreground">
           Tren Omzet
         </h2>
@@ -93,7 +95,7 @@ export default async function OwnerSalesPage({
         <SalesChart rows={rows} period={period} />
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
         <h2 className="mb-4 font-serif text-lg font-semibold text-foreground">
           5 Menu Terlaris
         </h2>

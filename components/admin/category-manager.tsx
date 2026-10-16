@@ -152,7 +152,8 @@ export function CategoryManager({
         action={handleCreate}
         className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm"
       >
-        <div className="flex flex-col gap-3 sm:flex-row">
+        {/* `sm:flex-row` → semua input menumpuk dulu di layar HP */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <Input
             id="kategori-baru"
             name="name"
@@ -211,7 +212,8 @@ export function CategoryManager({
         </p>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      {/* `overflow-x-auto` supaya tabel bisa digeser horizontal di layar HP */}
+      <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>

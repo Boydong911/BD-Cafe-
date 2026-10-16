@@ -270,6 +270,34 @@ export type Database = {
       }
       is_owner: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
+      list_staff: {
+        Args: never
+        Returns: {
+          created_at: string
+          full_name: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          username: string
+        }[]
+      }
+      create_staff_account: {
+        Args: {
+          p_full_name?: string
+          p_password: string
+          p_username: string
+        }
+        Returns: string
+      }
+      delete_staff_account: { Args: { p_staff_id: string }; Returns: undefined }
+      reset_staff_password: {
+        Args: { p_new_password: string; p_staff_id: string }
+        Returns: undefined
+      }
+      update_staff_profile: {
+        Args: { p_full_name: string; p_staff_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       order_status:

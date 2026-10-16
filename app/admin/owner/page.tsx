@@ -67,7 +67,8 @@ export default async function OwnerOverviewPage() {
         </Link>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* `min-w-0` mencegah grid melebar melebihi layar HP saat isi kartu panjang */}
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Omzet Hari Ini"
           value={rupiah(today.omzet)}
@@ -94,7 +95,7 @@ export default async function OwnerOverviewPage() {
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
         <StatCard
           label="Pesanan Berjalan"
           value={`${active.active} pesanan`}

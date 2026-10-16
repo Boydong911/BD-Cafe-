@@ -21,14 +21,18 @@ export default async function OwnerMenuPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* `flex-col sm:flex-row` supaya tombol turun ke bawah di layar HP */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Menu & Produk</h1>
           <p className="text-sm text-muted-foreground">
             Kelola daftar menu, harga, HPP, dan stok BD Coffee.
           </p>
         </div>
-        <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
+        <Button
+          asChild
+          className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto"
+        >
           <Link href="/admin/owner/menu/new">
             <Plus className="mr-1.5 h-4 w-4" />
             Tambah Menu

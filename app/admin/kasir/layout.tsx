@@ -28,7 +28,8 @@ export default function KasirLayout({
           </form>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-5">{children}</main>
+      {/* `pb-24` memberi ruang untuk iPhone home bar di bagian bawah */}
+      <main className="mx-auto max-w-7xl px-4 py-5 pb-24 sm:pb-5">{children}</main>
     </div>
   );
 }

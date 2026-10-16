@@ -30,9 +30,12 @@ export default async function OwnerDashboardLayout({
   }
 
   return (
-    <div className="fixed inset-0 flex overflow-hidden bg-muted/30">
+    // mobile: halaman ikut scroll normal. `fixed inset-0 + overflow-hidden`
+    // (yang dipakai sebelumnya) membekukan scroll di layar kecil, jadi konten
+    // panjang tidak bisa digeser pakai jari.
+    <div className="flex min-h-dvh flex-col bg-muted/30 lg:flex-row lg:overflow-hidden">
       <OwnerSidebar ownerName={ownerName} />
-      <main className="flex-1 overflow-y-auto p-6 sm:p-8 lg:p-10">
+      <main className="flex-1 p-4 pt-16 sm:p-6 sm:pt-16 lg:overflow-y-auto lg:p-10 lg:pt-10">
         {children}
       </main>
     </div>
