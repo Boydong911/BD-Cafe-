@@ -11,6 +11,7 @@ import {
 import { SalesChart } from "@/components/admin/sales-chart";
 import { StatCard } from "@/components/admin/stat-card";
 import { TopMenuList } from "@/components/admin/top-menu-list";
+import { RegistrationBanner } from "@/components/admin/registration-banner";
 import {
   addDays,
   endOfWibDay,
@@ -25,6 +26,7 @@ import {
   fetchTopMenu,
   summarize,
 } from "@/lib/sales";
+import { fetchUnseenRegistrations } from "@/lib/registrations";
 
 // Ringkasan ikut berubah saat kasir memperbarui status pesanan.
 export const dynamic = "force-dynamic";
@@ -39,10 +41,11 @@ export default async function OwnerOverviewPage() {
   const weekStart = addDays(todayStart, -6);
   const weekEnd = endOfWibDay(now);
 
-  const [rows, topMenu, active] = await Promise.all([
+  const [rows, topMenu, active, registrations] = await Promise.all([
     fetchSalesReport("day", weekStart, weekEnd),
     fetchTopMenu(weekStart, weekEnd, 5),
     fetchActiveOrderCount(),
+    fetchUnseenRegistrations(),
   ]);
 
   const todayRows = rows.filter((row) => wibDateKey(new Date(row.bucket)) === todayKey);
@@ -51,6 +54,9 @@ export default async function OwnerOverviewPage() {
 
   return (
     <div className="space-y-6">
+      {/* Banner pendaftaran karyawan baru — paling atas, sebelum apa pun. */}
+      <RegistrationBanner entries={registrations} />
+
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-bold text-foreground">Ringkasan</h1>

@@ -107,19 +107,26 @@ export async function getPaymentState(orderId: string) {
 
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("orders")
-    .select("status, payment_status, created_at")
-    .eq("id", orderId)
-    .single();
+  // RPC, bukan select langsung — policy RLS select untuk anon sudah dikunci
+  // (lihat 20261017-lock-down-orders-rls.sql).
+  const { data, error } = await supabase.rpc("get_order_payment_state", {
+    p_order_id: orderId,
+  });
 
-  if (!data) return { expired: false };
+  if (error || !data || data.length === 0) return { expired: false };
 
-  if (data.payment_status === "paid" || data.status === "cancelled") {
+  const current = data[0];
+  const cur = current as unknown as {
+    status: string;
+    payment_status: string;
+    created_at: string;
+  };
+
+  if (cur.payment_status === "paid" || cur.status === "cancelled") {
     return { expired: false };
   }
 
-  const expired = minutesSince(data.created_at) > PAYMENT_WINDOW_MINUTES;
+  const expired = minutesSince(cur.created_at) > PAYMENT_WINDOW_MINUTES;
 
   if (expired) {
     await callBooleanRpc(supabase, "cancel_unpaid_order", orderId);

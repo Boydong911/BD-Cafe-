@@ -212,21 +212,38 @@ create policy "menu_items_owner_delete"
 
 -- ORDERS:
 --  * Siapa saja (anon) boleh INSERT order baru (checkout customer)
---  * Siapa saja boleh SELECT order berdasarkan id (dipakai halaman /order/[orderId]) —
---    aman karena id berupa UUID acak yang tidak ditebak.
---  * Hanya staff yang boleh UPDATE (ubah status) dan SELECT semua daftar order.
+--  * Hanya staff yang boleh SELECT daftar order & UPDATE status.
+--
+--  CATATAN PENTING (diperbaiki 2026-10-17):
+--    Dulu ada policy "orders_public_select_by_id" dengan `using (true)` —
+--    padahal namanya promising "by id". `using (true)` berarti SEMUA baris
+--    lolos untuk SIAPA SAJA termasuk anon tanpa login, jadi siapa pun bisa
+--    membaca seluruh riwayat pesanan: nama pelanggan, meja, total, catatan.
+--    Policy itu sudah DIHAPUS.
+--
+--    Halaman customer (/order/[id] dan /order/[id]/pay) sekarang memakai RPC
+--    `get_order_by_id(p_order_id)` / `get_order_items(p_order_id)` yang
+--    SECURITY DEFINER dan hanya mengembalikan SATU baris untuk UUID tertentu.
+--    UUID acak 122-bit tidak bisa ditebak, jadi model "punya link = punya
+--    akses" tetap berlaku tanpa daftar pesanan ikut terbuka.
+--
+--    Konsekuensi: halaman customer tidak bisa pakai Realtime lagi (Realtime
+--    tunduk pada RLS yang sama), jadi status di-poll tiap 4-5 detik lewat
+--    `get_order_payment_state()`. Dashboard kasir tetap Realtime karena kasir
+--    adalah staff.
 create policy "orders_public_insert"
   on public.orders for insert with check (true);
-create policy "orders_public_select_by_id"
-  on public.orders for select using (true);
+create policy "orders_staff_select"
+  on public.orders for select using (public.is_staff());
 create policy "orders_staff_update"
   on public.orders for update using (public.is_staff()) with check (public.is_staff());
 
--- ORDER ITEMS: sama seperti orders
+-- ORDER ITEMS: sama seperti orders — insert terbuka untuk anon (checkout),
+-- select hanya staff. Halaman customer pakai RPC get_order_items().
 create policy "order_items_public_insert"
   on public.order_items for insert with check (true);
-create policy "order_items_public_select"
-  on public.order_items for select using (true);
+create policy "order_items_staff_select"
+  on public.order_items for select using (public.is_staff());
 create policy "order_items_staff_update"
   on public.order_items for update using (public.is_staff());
 

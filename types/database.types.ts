@@ -193,6 +193,48 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_registration_reads: {
+        Row: {
+          last_seen_at: string
+          staff_id: string
+        }
+        Insert: {
+          last_seen_at?: string
+          staff_id: string
+        }
+        Update: {
+          last_seen_at?: string
+          staff_id?: string
+        }
+        Relationships: []
+      }
+      staff_registration_log: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          source: string
+          staff_id: string | null
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          source?: string
+          staff_id?: string | null
+          username: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          source?: string
+          staff_id?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -305,6 +347,58 @@ export type Database = {
         Args: { p_full_name: string; p_staff_id: string }
         Returns: undefined
       }
+      // Dibuat di 20261017-lock-down-orders-rls.sql — menggantikan select
+      // langsung ke tabel orders, karena policy RLS select untuk anon dihapus.
+      get_order_by_id: {
+        Args: { p_order_id: string }
+        Returns: {
+          created_at: string
+          customer_name: string
+          id: string
+          notes: string | null
+          order_number: string | null
+          order_type: Database["public"]["Enums"]["order_type"]
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          status: Database["public"]["Enums"]["order_status"]
+          subtotal: number
+          table_number: string | null
+          total: number
+          updated_at: string
+        }[]
+      }
+      get_order_items: {
+        Args: { p_order_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          menu_item_id: string | null
+          menu_name: string
+          quantity: number
+          selected_customizations: Json
+          subtotal: number
+        }[]
+      }
+      get_order_payment_state: {
+        Args: { p_order_id: string }
+        Returns: {
+          created_at: string
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          status: Database["public"]["Enums"]["order_status"]
+        }[]
+      }
+      list_recent_registrations: {
+        Args: { p_days?: number }
+        Returns: {
+          created_at: string
+          full_name: string | null
+          id: string
+          source: string
+          still_active: boolean
+          username: string
+        }[]
+      }
+      mark_registrations_seen: { Args: { p_staff_id: string }; Returns: undefined }
     }
     Enums: {
       order_status:

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -13,6 +12,25 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Dibatalkan",
 };
 
+/** Berapa ms antar pengecekan status. 5 detik cukup untukfeel responsif. */
+const POLL_MS = 5000;
+
+/**
+ * Status pesanan untuk halaman customer.
+ *
+ * SEBELUMNYA memakai Supabase Realtime (`postgres_changes`). Sekarang memakai
+ * polling, karena Realtime tunduk pada RLS yang sama dengan select biasa:
+ * policy select untuk anon sudah dihapus di
+ * `supabase/migrations/20261017-lock-down-orders-rls.sql`, jadi halaman customer
+ * (yang belum login) tidak lagi menerima event perubahan.
+ *
+ * Konsekuensinya: status，paling lambat 5 detik baru berubah. Untuk layar
+ * antrean pelanggan, itu masih sangat terima. Dashboard kasir tetap
+ * memakai Realtime karena kasir adalah staff dan policy-nya masih terbuka.
+ *
+ * Halaman ini tetap render dari `initialStatus` (dari server), jadi tidak ada
+ * flash kosong saat hydration.
+ */
 export function OrderStatusRealtime({
   orderId,
   initialStatus,
@@ -23,26 +41,31 @@ export function OrderStatusRealtime({
   const [status, setStatus] = useState(initialStatus);
 
   useEffect(() => {
-    const supabase = createClient();
+    let cancelled = false;
 
-    const channel = supabase
-      .channel(`order-${orderId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "orders",
-          filter: `id=eq.${orderId}`,
-        },
-        (payload) => {
-          setStatus(payload.new.status as string);
-        }
-      )
-      .subscribe();
+    async function check() {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
 
+        const { data, error } = await supabase.rpc("get_order_payment_state", {
+          p_order_id: orderId,
+        });
+
+        if (cancelled || error || !data?.length) return;
+
+        const next = (data[0] as { status?: string }).status;
+        if (next) setStatus(next);
+      } catch {
+        // Gagal cek (jaringan putus, RPC belum ada) — coba lagi di tick berikutnya.
+        // Halaman tetap menampilkan status terakhir yang diketahui.
+      }
+    }
+
+    const timer = setInterval(check, POLL_MS);
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      clearInterval(timer);
     };
   }, [orderId]);
 

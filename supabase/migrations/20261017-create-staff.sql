@@ -139,6 +139,16 @@ begin
        and full_name is null;
   end if;
 
+  -- 2c) Catat jejak pendaftaran supaya owner bisa melihat siapa yang masuk.
+  --     Source 'owner' karena dipanggil dari dashboard Karyawan.
+  --     Fungsi log-nya dibuat di 20261017-lock-down-orders-rls.sql.
+  perform public._bd_log_registration(
+    v_user_id,
+    btrim(p_username),
+    nullif(btrim(coalesce(p_full_name, '')), ''),
+    'owner'
+  );
+
   return v_user_id;
 end;
 $$;
@@ -231,6 +241,15 @@ begin
     insert into public.profiles (id, username, full_name, role)
     values (v_user_id, v_clean, btrim(p_full_name), 'kasir');
   end if;
+
+  -- Catat jejak pendaftaran. Source 'self_register' karena berasal dari
+  -- halaman /daftar yang terbuka untuk umum — ini yang perlu diawasi owner.
+  perform public._bd_log_registration(
+    v_user_id,
+    v_clean,
+    btrim(p_full_name),
+    'self_register'
+  );
 
   return v_user_id;
 end;

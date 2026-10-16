@@ -35,15 +35,29 @@ export default async function OrderPage({
   const { orderId } = await params;
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("orders")
-    .select("*, order_items(*)")
-    .eq("id", orderId)
-    .single();
+  /*
+   * Pakai RPC, bukan `.from("orders").select()`.
+   *
+   * Alasannya: policy RLS select untuk anon sudah dihapus (lihat migrasi
+   * 20261017-lock-down-orders-rls.sql) karena `using (true)` berarti siapa
+   * saja bisa membaca SELURUH riwayat pesanan. Halaman customer sekarang
+   * lewat `get_order_by_id()` yang hanya mengembalikan satu baris kalau
+   * UUID-nya benar-benar ada — UUID acak 122-bit tidak bisa ditebak.
+   */
+  const [{ data: orderData, error: orderError }, { data: itemsData }] =
+    await Promise.all([
+      supabase.rpc("get_order_by_id", { p_order_id: orderId }),
+      supabase.rpc("get_order_items", { p_order_id: orderId }),
+    ]);
 
-  if (!data) notFound();
+  if (orderError || !orderData || orderData.length === 0) notFound();
 
-  const order = data as unknown as OrderRow;
+  const items = (itemsData ?? []) as unknown as OrderRow["order_items"];
+
+  const order = {
+    ...(orderData[0] as unknown as Omit<OrderRow, "order_items">),
+    order_items: items,
+  };
 
   const paid = order.payment_status === "paid";
   const hasQueueNumber = paid && !!order.order_number;

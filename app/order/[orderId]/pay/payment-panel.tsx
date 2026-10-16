@@ -84,7 +84,7 @@ function CashBox({ orderId }: { orderId: string }) {
   const router = useRouter();
 
   // Tunggu kasir mengonfirmasi -> otomatis masuk ke halaman antrean
-  useRealtimePayment(() => router.replace(`/order/${orderId}`));
+  useRealtimePayment(orderId, () => router.replace(`/order/${orderId}`));
 
   return (
     <div className="space-y-5">
@@ -292,11 +292,23 @@ function secondsLeft(createdAt: string) {
   return Math.max(0, Math.floor((deadline - Date.now()) / 1000));
 }
 
+/** Berapa ms antar pengecekan status pembayaran. */
+const POLL_MS = 4000;
+
 /**
- * Subscribe perubahan `orders` sehingga halaman payment ikut ter-update
- * begitu kasir mengonfirmasi pembayaran (jalur Tunai).
+ * Pantau status pembayaran supaya halaman ikut ter-update begitu kasir
+ * mengonfirmasi (jalur Tunai).
+ *
+ * SEBELUMNYA memakai Realtime `postgres_changes`. Sekarang polling, karena
+ * Realtime tunduk pada RLS yang sama dengan select biasa: policy select untuk
+ * anon sudah dihapus di `supabase/migrations/20261017-lock-down-orders-rls.sql`,
+ * jadi halaman pembayaran customer (belum login) tidak lagi menerima event.
+ *
+ * Polling lewat RPC `get_order_payment_state()` yang mengembalikan satu baris.
+ * Perubahan status terbaca paling lama 4 detik — untuk halaman bayar masih
+ * masih diterima. Dashboard kasir tetap Realtime karena kasir itu staff.
  */
-function useRealtimePayment(onPaid: () => void) {
+function useRealtimePayment(orderId: string, onPaid: () => void) {
   const router = useRouter();
   const cb = useRef(onPaid);
   cb.current = onPaid;
@@ -304,31 +316,34 @@ function useRealtimePayment(onPaid: () => void) {
   useEffect(() => {
     let cancelled = false;
 
-    (async () => {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const channel = supabase
-        .channel(`order-pay-${Math.random().toString(36).slice(2)}`)
-        .on(
-          "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "orders" },
-          () => {
-            if (!cancelled) {
-              cb.current();
-              router.refresh();
-            }
-          }
-        )
-        .subscribe();
+    async function check() {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
 
-      return () => {
-        cancelled = true;
-        supabase.removeChannel(channel);
-      };
-    })();
+        const { data, error } = await supabase.rpc("get_order_payment_state", {
+          p_order_id: orderId,
+        });
 
+        if (cancelled || error || !data?.length) return;
+
+        const row = data[0] as { status?: string; payment_status?: string };
+
+        // Sudah bayar atau dibatalkan -> pindah ke halaman antrean.
+        if (row.payment_status === "paid" || row.status === "cancelled") {
+          cb.current();
+          router.refresh();
+        }
+      } catch {
+        // Gagal cek — coba lagi di tick berikutnya, halaman tetap menampilkan
+        // state terakhir yang diketahui.
+      }
+    }
+
+    const timer = setInterval(check, POLL_MS);
     return () => {
       cancelled = true;
+      clearInterval(timer);
     };
-  }, [router]);
+  }, [orderId, router]);
 }

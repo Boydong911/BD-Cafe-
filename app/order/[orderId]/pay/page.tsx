@@ -22,17 +22,15 @@ export default async function PayPage({ params }: { params: Promise<{ orderId: s
   const { orderId } = await params;
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("orders")
-    .select(
-      "id, order_number, customer_name, order_type, table_number, payment_method, payment_status, status, total, created_at"
-    )
-    .eq("id", orderId)
-    .single();
+  // RPC, bukan select langsung — policy RLS select untuk anon sudah dikunci
+  // (lihat 20261017-lock-down-orders-rls.sql).
+  const { data, error } = await supabase.rpc("get_order_by_id", {
+    p_order_id: orderId,
+  });
 
-  if (!data) notFound();
+  if (error || !data || data.length === 0) notFound();
 
-  const order = data as unknown as PayRow;
+  const order = data[0] as unknown as PayRow;
 
   // Kalau sudah dibayar / dibatalkan, langsung arahkan ke halaman antrean
   if (order.payment_status === "paid" || order.status === "cancelled") {
