@@ -41,6 +41,14 @@ export function rupiahShort(value: number | string | null | undefined): string {
   return rupiahFormatter.format(n);
 }
 
+/** Ukuran file yang enak dibaca: `245000` -> `245 KB`. */
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return "-";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 /** Tanggal kalender di WIB sebagai `"YYYY-MM-DD"` — dasar hitungan "hari ini". */
 export function wibDateKey(date: Date): string {
   return new Intl.DateTimeFormat("en-CA", {

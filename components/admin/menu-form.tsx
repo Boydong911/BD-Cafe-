@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, type ChangeEvent } from "react";
+import { useActionState, useEffect, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,10 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImageOff, Loader2 } from "lucide-react";
+import { Check, ImageOff, Loader2, Upload } from "lucide-react";
 import { createMenuItem, updateMenuItem, type MenuFormState } from "@/app/admin/owner/menu/actions";
-import { MenuCustomizationEditor } from "@/components/admin/menu-customization-editor";
+import { cn } from "@/lib/utils";
+import { formatBytes } from "@/lib/format";
 import type { CategoryRow, MenuItemRow } from "@/types/menu";
+
+/** Batas upload — harus sama dengan validasi di `uploadMenuImage()`. */
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
 const initialState: MenuFormState = {};
 
@@ -44,11 +48,28 @@ export function MenuForm({
   const [imagePreview, setImagePreview] = useState<string | null>(
     initialData?.image_url ?? null
   );
+  const [pickedFile, setPickedFile] = useState<{ name: string; size: number } | null>(
+    null
+  );
 
   function handleImageChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) setImagePreview(URL.createObjectURL(file));
+    if (!file) {
+      setPickedFile(null);
+      return;
+    }
+    setPickedFile({ name: file.name, size: file.size });
+    setImagePreview(URL.createObjectURL(file));
   }
+
+  // Lepas blob URL lama supaya tidak menumpuk di memory setiap owner
+  // memilih file berkali-kali.
+  useEffect(() => {
+    if (!imagePreview?.startsWith("blob:")) return;
+    return () => URL.revokeObjectURL(imagePreview);
+  }, [imagePreview]);
+
+  const fileTooBig = pickedFile ? pickedFile.size > MAX_IMAGE_BYTES : false;
 
   return (
     <form action={formAction} className="max-w-2xl space-y-6">
@@ -60,7 +81,7 @@ export function MenuForm({
 
       <div className="space-y-2">
         <Label htmlFor="image">Foto Menu</Label>
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-4">
           <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border bg-muted">
             {imagePreview ? (
               // eslint-disable-next-line @next/next/no-img-element -- preview lokal (blob:), bukan aset remote
@@ -71,16 +92,61 @@ export function MenuForm({
               </div>
             )}
           </div>
-          <Input
-            id="image"
-            name="image"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handleImageChange}
-            className="max-w-xs"
-          />
+
+          <div className="min-w-0 flex-1 space-y-1.5">
+            {/*
+              Input file asli disembunyikan (sr-only) supaya bisa diganti
+              tampilan sendiri. Native "Choose File" tidak bisa diberi hover
+              yang berarti, dan tidak ada indikasi apakah file sudah dipilih.
+            */}
+            <input
+              id="image"
+              name="image"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleImageChange}
+              className="sr-only"
+            />
+
+            <label
+              htmlFor="image"
+              className={cn(
+                "inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm font-medium transition-colors",
+                "hover:border-accent hover:bg-accent/10 hover:text-accent-foreground",
+                "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
+                fileTooBig
+                  ? "border-destructive bg-destructive/10 text-destructive"
+                  : pickedFile
+                    ? "border-accent/70 bg-accent/10 text-accent-foreground"
+                    : "text-muted-foreground"
+              )}
+            >
+              {fileTooBig ? (
+                <ImageOff className="h-4 w-4 shrink-0" />
+              ) : pickedFile ? (
+                <Check className="h-4 w-4 shrink-0" />
+              ) : (
+                <Upload className="h-4 w-4 shrink-0" />
+              )}
+              <span className="max-w-[16rem] truncate">
+                {pickedFile ? pickedFile.name : "Pilih foto"}
+              </span>
+            </label>
+
+            <p
+              className={cn(
+                "truncate text-xs",
+                fileTooBig ? "text-destructive" : "text-muted-foreground"
+              )}
+            >
+              {fileTooBig
+                ? `Ukuran ${formatBytes(pickedFile!.size)} melebihi batas 3MB.`
+                : pickedFile
+                  ? `${formatBytes(pickedFile.size)} — klik lagi untuk mengganti.`
+                  : "JPG, PNG, atau WEBP. Maks 3MB."}
+            </p>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">JPG, PNG, atau WEBP. Maks 3MB.</p>
       </div>
 
       <div className="space-y-2">
@@ -158,15 +224,6 @@ export function MenuForm({
         </div>
         <input type="hidden" name="is_available" value={isAvailable ? "on" : ""} />
         <Switch checked={isAvailable} onCheckedChange={setIsAvailable} />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Opsi Kustomisasi</Label>
-        <p className="text-xs text-muted-foreground">
-          Contoh: Level Gula (Normal / Less Sugar), Extra Shot (+Rp 5.000). Kosongkan kalau
-          menu tidak punya opsi.
-        </p>
-        <MenuCustomizationEditor initialGroups={initialData?.customization_options ?? []} />
       </div>
 
       <div className="flex gap-2 pt-2">
