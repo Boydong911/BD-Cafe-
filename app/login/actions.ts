@@ -129,8 +129,35 @@ export async function kasirLoginAction(
   redirect("/admin/kasir");
 }
 
+/**
+ * Keluar dari sesi.
+ *
+ * Arahkan ke halaman login yang SESUAI dengan role-nya, bukan selalu ke
+ * `/login` (halaman owner). Kasir yang keluar dari dashboard kasir akan
+ * mendarat di `/login/kasir`, jadi tidak salah masuk ke halaman owner.
+ *
+ * Role dibaca SEBELUM signOut — sesudah keluar, sesi sudah tidak ada dan
+ * tidak ada cara tahu dia kasir atau owner.
+ */
 export async function logoutAction() {
   const supabase = await createClient();
+
+  let target = "/login/kasir";
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.role === "owner") target = "/login";
+  }
+
   await supabase.auth.signOut();
-  redirect("/login");
+  redirect(target);
 }

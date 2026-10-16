@@ -17,11 +17,20 @@ export default function KasirLayout({
             <p className="text-xs opacity-80">Dashboard Kasir</p>
           </div>
           <form action={logoutAction}>
+            {/*
+              Warna ditulis eksplisit, bukan mengandalkan variant `secondary`.
+
+              Variant `secondary` punya `text-secondary-foreground` (cokelat
+              gelap) yang cocok untuk kartu terang. Di header yang gelap
+              (bg-primary) teksnya ikut jadi hampir tidak terlihat, terutama
+              saat hover. Jadi warna netral + arahkan text ke warna terang
+              supaya selalu kontras dengan header gelap.
+            */}
             <Button
               type="submit"
-              variant="secondary"
+              variant="ghost"
               size="sm"
-              className="font-sans"
+              className="font-sans text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
             >
               Keluar
             </Button>

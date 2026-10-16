@@ -38,16 +38,7 @@ export default function KasirLoginPage() {
             <Store className="h-5 w-5 text-accent" />
             <CardTitle>Login Kasir</CardTitle>
           </div>
-          <CardDescription>
-            Masuk untuk memproses pesanan. Owner bisa memakai{" "}
-            <Link
-              href="/login"
-              className="font-medium text-foreground underline underline-offset-2"
-            >
-              halaman login owner
-            </Link>
-            .
-          </CardDescription>
+          <CardDescription>Masuk untuk memproses pesanan.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={formAction} className="space-y-4">

@@ -2,7 +2,6 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import Link from "next/link";
 import { ownerLoginAction, type LoginState } from "./actions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -39,16 +38,7 @@ export default function OwnerLoginPage() {
             <ShieldCheck className="h-5 w-5 text-accent" />
             <CardTitle>Login Owner</CardTitle>
           </div>
-          <CardDescription>
-            Khusus pemilik BD Coffee. Kasir cukup memakai{" "}
-            <Link
-              href="/login/kasir"
-              className="font-medium text-foreground underline underline-offset-2"
-            >
-              halaman login kasir
-            </Link>
-            .
-          </CardDescription>
+          <CardDescription>Khusus pemilik BD Coffee.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={formAction} className="space-y-4">
