@@ -4,6 +4,7 @@ import { z } from "zod";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { CustomizationGroup } from "@/types/menu";
+import type { Json } from "@/types/database.types";
 
 const cartItemSchema = z.object({
   menu_item_id: z.string().uuid(),
@@ -66,7 +67,7 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
     unit_price: number;
     unit_cost: number;
     quantity: number;
-    selected_customizations: unknown;
+    selected_customizations: Json;
     subtotal: number;
   }[] = [];
 

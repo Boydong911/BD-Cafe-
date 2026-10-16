@@ -14,20 +14,20 @@ function minutesSince(iso: string) {
 /**
  * Panggil RPC Postgres yang mengembalikan boolean.
  *
- * `types/database.types.ts` belum di-generate, jadi nama function RPC belum
- * dikenal oleh tipe Supabase client (masuk kategori `never` yang sama seperti
- * error `never` lain di project ini). Cast di sini mengisolasi masalahnya di
- * satu tempat — nanti cukup regenerate types, cast ini bisa dihapus.
+ * Catatan: function `confirm_qris_payment` & `cancel_unpaid_order` dibuat di
+ * migrasi `20261016-rls-qris-confirm.sql`, jadi harus ikut ada di
+ * `types/database.types.ts` — kalau tidak, TypeScript tidak mengenal nama
+ * RPC-nya. Kalau file types di-regenerate ulang, pastikan dua function ini
+ * tetap ada di bagian `Functions`.
  */
 async function callBooleanRpc(
   supabase: Awaited<ReturnType<typeof createClient>>,
   fn: "confirm_qris_payment" | "cancel_unpaid_order",
   orderId: string
 ): Promise<{ ok: boolean; error: string | null }> {
-  const result = (await supabase.rpc(fn, { p_order_id: orderId } as never)) as {
-    data: boolean | null;
-    error: { message: string } | null;
-  };
+  const result = fn === "confirm_qris_payment"
+    ? await supabase.rpc("confirm_qris_payment", { p_order_id: orderId })
+    : await supabase.rpc("cancel_unpaid_order", { p_order_id: orderId });
 
   if (result.error) return { ok: false, error: result.error.message };
   return { ok: result.data === true, error: null };
@@ -115,17 +115,11 @@ export async function getPaymentState(orderId: string) {
 
   if (!data) return { expired: false };
 
-  const cur = data as unknown as {
-    status: string;
-    payment_status: string;
-    created_at: string;
-  };
-
-  if (cur.payment_status === "paid" || cur.status === "cancelled") {
+  if (data.payment_status === "paid" || data.status === "cancelled") {
     return { expired: false };
   }
 
-  const expired = minutesSince(cur.created_at) > PAYMENT_WINDOW_MINUTES;
+  const expired = minutesSince(data.created_at) > PAYMENT_WINDOW_MINUTES;
 
   if (expired) {
     await callBooleanRpc(supabase, "cancel_unpaid_order", orderId);

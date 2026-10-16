@@ -4,6 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database.types";
 
 const tableSchema = z.object({
   table_number: z.string().trim().min(1, "Nomor meja wajib diisi").max(10),
@@ -35,7 +36,16 @@ export async function createTable(formData: FormData) {
   }
 
   const supabase = await requireOwner();
-  const { error } = await supabase.from("tables").insert(parsed.data);
+
+  // Catatan: `tsconfig` memakai `strict: false`, dan tanpa `strictNullChecks`
+  // inferensi Zod v3 degrade — `parsed.data` jadi bertipe semua-opsional.
+  // Karena itu payload ditulis eksplisit supaya kolom wajib tidak hilang.
+  const payload: Database["public"]["Tables"]["tables"]["Insert"] = {
+    table_number: parsed.data.table_number,
+    label: parsed.data.label ?? null,
+  };
+
+  const { error } = await supabase.from("tables").insert(payload);
 
   if (error) {
     if (error.code === "23505") return { error: "Nomor meja sudah ada" };

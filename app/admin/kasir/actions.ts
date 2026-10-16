@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import type { OrderStatus } from "@/types/order";
+import type { OrderStatus, PaymentStatus } from "@/types/order";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -56,10 +56,7 @@ export async function updateOrderStatus(
     return { success: false, error: "Pesanan tidak ditemukan." };
   }
 
-  const cur = current as unknown as {
-    status: OrderStatus;
-    payment_status: "pending" | "paid";
-  };
+  const cur = current as { status: OrderStatus; payment_status: PaymentStatus };
 
   if (!ALLOWED[cur.status].includes(status)) {
     return {
@@ -77,7 +74,7 @@ export async function updateOrderStatus(
 
   const { error } = await supabase
     .from("orders")
-    .update({ status } as never)
+    .update({ status })
     .eq("id", orderId);
 
   if (error) return { success: false, error: "Gagal memperbarui status." };
@@ -96,7 +93,7 @@ export async function confirmPayment(orderId: string): Promise<ActionResult> {
 
   const { error } = await supabase
     .from("orders")
-    .update({ payment_status: "paid" } as never)
+    .update({ payment_status: "paid" })
     .eq("id", orderId)
     .eq("payment_status", "pending")
     .neq("status", "cancelled");

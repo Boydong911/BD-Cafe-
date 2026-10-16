@@ -32,7 +32,7 @@
   "**/*.tsx",
   ".next/types/**/*.ts",
   "app/globals.css"
-, "app/admin/owner/meja/actions"  ],
+],
   "exclude": [
     "node_modules"
   ]

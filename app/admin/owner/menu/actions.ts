@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import type { Database, Json } from "@/types/database.types";
 
 const menuSchema = z.object({
   name: z.string().min(2, "Nama menu wajib diisi"),
@@ -99,7 +100,7 @@ export async function createMenuItem(
     }
   }
 
-  let customizationOptions: unknown = [];
+  let customizationOptions: Json = [];
   if (parsed.data.customization_options) {
     try {
       customizationOptions = JSON.parse(parsed.data.customization_options);
@@ -149,7 +150,7 @@ export async function updateMenuItem(
 
   const supabase = await createClient();
 
-  const updatePayload: Record<string, unknown> = {
+  const updatePayload: Database["public"]["Tables"]["menu_items"]["Update"] = {
     name: parsed.data.name,
     description: parsed.data.description || null,
     price: parsed.data.price,
