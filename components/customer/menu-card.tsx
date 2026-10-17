@@ -31,12 +31,11 @@ const WRAP =
 /**
  * Kartu katalog. Bentuknya ditentukan oleh ada-tidaknya `?table=`.
  *
- *  - Tanpa `?table=` (mis. /menu): hanya gambar + nama. Ini halaman
- *    "lihat-lihat", belum ada meja yang dituju, jadi tombol pesan
- *    tidak muncul.
+ *  - Tanpa `?table=` (mis. /menu): hanya gambar + nama, dan tidak bisa
+ *    diklik. Halaman ini untuk melihat-lihat saja.
  *  - Dengan `?table=` (mis. /menu?table=02): pelanggan sedang duduk di
- *    meja itu, jadi kustomisasi, jumlah, dan tombol keranjang muncul
- *    supaya pesan bisa langsung dari kartu.
+ *    meja itu. Kartu bisa diklik ke detail, dan kustomisasi, jumlah,
+ *    serta tombol keranjang muncul supaya pesan bisa langsung.
  *
  * Tidak ada prop baru untuk ini -- `tableParam` sudah ada.
  */
@@ -47,7 +46,7 @@ export function MenuCard({
   item: MenuCardItem;
   tableParam: string | null;
 }) {
-  const href = tableParam ? `/menu/${item.id}?table=${tableParam}` : `/menu/${item.id}`;
+  const href = tableParam ? `/menu/${item.id}?table=${tableParam}` : null;
 
   return (
     <div className={WRAP}>
@@ -57,10 +56,22 @@ export function MenuCard({
   );
 }
 
-/** Blok atas kartu: gambar + nama. Dipakai di kedua bentuk kartu. */
-function MenuCardTop({ item, href }: { item: MenuCardItem; href: string }) {
-  return (
-    <Link href={href} className="group block">
+/**
+ * Blok atas kartu: gambar + nama.
+ *
+ * `href` null -> hanya `div`, bukan link. Kalau tetap dibungkus link,
+ * kartu kelihatan bisa diklik padahal tidak, dan efek zoom saat hover
+ * ikut menyesatkan.
+ */
+function MenuCardTop({
+  item,
+  href,
+}: {
+  item: MenuCardItem;
+  href: string | null;
+}) {
+  const inner = (
+    <>
       <div className="relative aspect-square w-full bg-muted">
         {item.image_url ? (
           <Image
@@ -68,9 +79,9 @@ function MenuCardTop({ item, href }: { item: MenuCardItem; href: string }) {
             alt={item.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className={`object-cover transition-transform group-hover:scale-105 ${
-              item.is_available ? "" : "grayscale"
-            }`}
+            className={`object-cover ${
+              href ? "transition-transform group-hover:scale-105" : ""
+            } ${item.is_available ? "" : "grayscale"}`}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-muted-foreground">
@@ -88,7 +99,15 @@ function MenuCardTop({ item, href }: { item: MenuCardItem; href: string }) {
       <p className="p-3 text-center text-sm font-semibold leading-snug">
         {item.name}
       </p>
+    </>
+  );
+
+  return href ? (
+    <Link href={href} className="group block">
+      {inner}
     </Link>
+  ) : (
+    <div>{inner}</div>
   );
 }
 
@@ -159,7 +178,9 @@ function MenuCardControls({ item }: { item: MenuCardItem }) {
                     key={opt.label}
                     type="button"
                     disabled={disabled}
-                    onClick={() => setPicked((prev) => ({ ...prev, [g.name]: opt.label }))}
+                    onClick={() =>
+                      setPicked((prev) => ({ ...prev, [g.name]: opt.label }))
+                    }
                     className={`flex-1 truncate rounded-md border px-1 py-1.5 text-[11px] font-medium leading-tight transition-colors disabled:opacity-50 ${
                       active
                         ? "border-primary bg-primary text-primary-foreground"
@@ -186,7 +207,9 @@ function MenuCardControls({ item }: { item: MenuCardItem }) {
           >
             <Minus className="h-3.5 w-3.5" />
           </button>
-          <span className="w-5 text-center text-sm font-medium tabular-nums">{qty}</span>
+          <span className="w-5 text-center text-sm font-medium tabular-nums">
+            {qty}
+          </span>
           <button
             type="button"
             onClick={() => setQty((q) => q + 1)}
