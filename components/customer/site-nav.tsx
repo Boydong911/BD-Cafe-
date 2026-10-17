@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,18 @@ const NAV_ITEMS = [
  */
 export function SiteNav({ overlay = false }: { overlay?: boolean }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  /*
+   * Item aktif mengikuti halaman yang sedang dibuka, bukan ditulis manual.
+   * "/" hanya aktif di beranda; "/menu" juga aktif di halaman detailnya
+   * (/menu/<id>) supaya item itu tetap emas waktu pelanggan membuka detail menu.
+   */
+  const isActive = (href: string) => {
+    if (!href) return false;
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   const itemClass = (active: boolean) =>
     cn(
@@ -72,7 +85,7 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
               <Link
                 key={item.label}
                 href={item.href}
-                className={itemClass(item.href === "/menu")}
+                className={itemClass(isActive(item.href))}
               >
                 {item.label}
               </Link>
@@ -117,7 +130,7 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
                 key={item.label}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className={cn(itemClass(item.href === "/menu"), "block py-2.5")}
+                className={cn(itemClass(isActive(item.href)), "block py-2.5")}
               >
                 {item.label}
               </Link>
