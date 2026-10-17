@@ -12,7 +12,7 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Dibatalkan",
 };
 
-/** Berapa ms antar pengecekan status. 5 detik cukup untukfeel responsif. */
+/** Berapa ms antar pengecekan status. 5 detik masih terasa responsif. */
 const POLL_MS = 5000;
 
 /**
@@ -24,8 +24,8 @@ const POLL_MS = 5000;
  * `supabase/migrations/20261017-lock-down-orders-rls.sql`, jadi halaman customer
  * (yang belum login) tidak lagi menerima event perubahan.
  *
- * Konsekuensinya: status，paling lambat 5 detik baru berubah. Untuk layar
- * antrean pelanggan, itu masih sangat terima. Dashboard kasir tetap
+ * Konsekuensinya: status paling lambat 5 detik baru berubah. Untuk layar
+ * antrean pelanggan, itu masih sangat diterima. Dashboard kasir tetap
  * memakai Realtime karena kasir adalah staff dan policy-nya masih terbuka.
  *
  * Halaman ini tetap render dari `initialStatus` (dari server), jadi tidak ada

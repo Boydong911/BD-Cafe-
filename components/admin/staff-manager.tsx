@@ -117,7 +117,7 @@ export function StaffManager({
   /**
    * Isi field password dengan hasil acak.
    *
-   * Pakai `formRef` + `requestSubmit()` supaya değannya ikut terkirim sebagai
+   * Pakai `formRef` + `requestSubmit()` supaya nilainya ikut terkirim sebagai
    * bagian dari `formData` yang terkirim. Mengatur `value` langsung tidak
    * cukup untuk field yang belum pernah disentuh user (React/ uncontrolled
    * input akan mengabaikan penulisan property `value`).

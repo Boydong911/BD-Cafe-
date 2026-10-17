@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrderStatusRealtime } from "./order-status-realtime";
 
@@ -102,6 +103,25 @@ export default async function OrderPage({
         </div>
       )}
 
+      {/*
+        Petunjuk screenshot.
+
+        Kenapa perlu: nomor antrian ini yang jadi rujukan pelanggan kalau
+        ditanya kasir "antrean berapa?", atau kalau pesanan berantakan dan
+        nama pemesannya mirip-mirip. Kalau pelanggan menyimpan halamannya,
+        kasir bisa langsung mencocokkan tanpa menulis nomor di kertas.
+
+        Ditaruh DIBAWAH kotak, bukan di dalam, supaya angka antrian
+        -- bagian paling penting -- tetap jadi satu-satunya hal yang besar
+        di halaman ini.
+      */}
+      {hasQueueNumber && (
+        <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+          <Camera className="h-3.5 w-3.5 shrink-0" />
+          Silahkan di screenshot sebagai bukti antrian
+        </p>
+      )}
+
       {/* Client Component: subscribe ke perubahan status via Supabase Realtime */}
       <OrderStatusRealtime orderId={order.id} initialStatus={order.status} />
 
@@ -125,6 +145,26 @@ export default async function OrderPage({
           Pembayaran: {order.payment_method === "qris" ? "QRIS" : "Tunai di Kasir"}
           {order.payment_status === "paid" ? " — LUNAS" : " — belum lunas"}
         </p>
+      </div>
+
+      {/*
+        Jalan keluar dari halaman ini.
+
+        Pelanggan yang antre di kasir tidak mungkin menatap layar terus --
+        mereka mau lihat-lihat menu dulu kalau mau pesan lagi. Tombolnya
+        diletakkan paling bawah supaya tidak memenuhi layar di HP.
+
+        Pergi ke /menu tidak membatalkan apa pun. Status pesanan tetap
+        tercatat di board kasir, dan pelanggan bisa balik ke halaman ini
+        lewat link yang diberikan kasir.
+      */}
+      <div className="border-t pt-4">
+        <Button asChild variant="outline" className="w-full">
+          <Link href="/menu">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Kembali ke Menu
+          </Link>
+        </Button>
       </div>
     </div>
   );
