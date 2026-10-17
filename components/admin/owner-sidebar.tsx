@@ -78,7 +78,7 @@ export function OwnerSidebar({ ownerName }: { ownerName?: string | null }) {
         <div className="flex items-start justify-between px-6 py-6">
           <div>
             <span className="font-serif text-xl font-bold tracking-wide">
-              BD Coffee
+              BD Cafe
             </span>
             <p className="text-[11px] text-primary-foreground/50">
               Dashboard Owner

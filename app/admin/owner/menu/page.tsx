@@ -31,7 +31,7 @@ export default async function OwnerMenuPage() {
         <div>
           <h1 className="text-2xl font-bold">Menu & Produk</h1>
           <p className="text-sm text-muted-foreground">
-            Kelola daftar menu, harga, HPP, dan stok BD Coffee.
+            Kelola daftar menu, harga, HPP, dan stok BD Cafe.
           </p>
         </div>
         <Button

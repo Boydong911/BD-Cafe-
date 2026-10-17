@@ -6,7 +6,7 @@
  * dan menampilkan hasil yang salah.
  */
 
-/** Zona waktu operasional BD Coffee. */
+/** Zona waktu operasional BD Cafe. */
 export const WIB = "Asia/Jakarta";
 
 const rupiahFormatter = new Intl.NumberFormat("id-ID", {

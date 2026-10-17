@@ -23,7 +23,7 @@ export const metadata: Metadata = {
    * otomatis menjadi "Kasir - BD Cafe".
    *
    * Tanpa template ini, tiap halaman harus menulis ulang nama cafe
-   * sendiri -- dan tadi semua tab browser cuma menampilkan "BD Coffee".
+   * sendiri -- dan tadi semua tab browser cuma menampilkan "BD Cafe".
    */
   title: {
     default: SITE_NAME,

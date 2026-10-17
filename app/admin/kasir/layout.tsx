@@ -12,7 +12,7 @@ export default function KasirLayout({
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <div>
             <p className="font-serif text-lg font-semibold leading-tight">
-              BD Coffee
+              BD Cafe
             </p>
             <p className="text-xs opacity-80">Dashboard Kasir</p>
           </div>

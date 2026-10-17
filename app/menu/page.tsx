@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { MenuCatalog } from "@/components/customer/menu-catalog";
+import { SiteNav } from "@/components/customer/site-nav";
 import { TableSessionSync } from "@/components/customer/table-session-sync";
 import { fetchMenuCatalog } from "@/lib/categories";
 import { tableTitle } from "@/lib/page-title";
@@ -37,7 +38,10 @@ export default async function MenuPage({
   const { items, groups } = await fetchMenuCatalog();
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-4 pb-24 sm:p-6">
+    <div className="min-h-dvh">
+      <SiteNav />
+
+      <div className="mx-auto max-w-5xl space-y-6 p-4 pb-24 sm:p-6">
       <Suspense fallback={null}>
         <TableSessionSync />
       </Suspense>
@@ -45,13 +49,13 @@ export default async function MenuPage({
       <div className="flex flex-col items-center gap-2 text-center">
         <Image
           src="/logo.png"
-          alt="BD Coffee"
+          alt="BD Cafe"
           width={64}
           height={64}
           priority
           className="h-16 w-16 shrink-0 object-contain"
         />
-        <h1 className="font-serif text-3xl font-bold">BD Coffee Menu</h1>
+        <h1 className="font-serif text-3xl font-bold">BD Cafe Menu</h1>
         {table && (
           <p className="text-sm text-muted-foreground">
             Meja <span className="font-medium text-foreground">{table}</span> —
@@ -66,6 +70,7 @@ export default async function MenuPage({
         tableParam={table ?? null}
         centerFilter
       />
+      </div>
     </div>
   );
 }

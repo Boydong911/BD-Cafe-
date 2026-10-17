@@ -117,7 +117,7 @@ export function CheckoutForm() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Checkout</h1>
-        <p className="text-sm text-muted-foreground">Selesaikan pesananmu di BD Coffee.</p>
+        <p className="text-sm text-muted-foreground">Selesaikan pesananmu di BD Cafe.</p>
       </div>
 
       <div className="space-y-2 rounded-lg border p-4">

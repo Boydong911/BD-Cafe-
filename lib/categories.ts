@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { normalizeCustomizationGroups } from "@/lib/menu-customizations";
 import type { MenuCardItem } from "@/components/customer/menu-card";
 
 /**
@@ -19,7 +20,7 @@ export async function fetchMenuCatalog(): Promise<{
   const [{ data, error }, groups] = await Promise.all([
     supabase
       .from("menu_items")
-      .select("id, name, price, image_url, is_available, categories(id, name)")
+      .select("id, name, description, price, image_url, is_available, customization_options, categories(id, name)")
       .order("name", { ascending: true }),
     fetchCategoryTree(),
   ]);
@@ -32,9 +33,11 @@ export async function fetchMenuCatalog(): Promise<{
   type Row = {
     id: string;
     name: string;
+    description: string | null;
     price: number;
     image_url: string | null;
     is_available: boolean;
+    customization_options: unknown;
     categories: { id: string; name: string } | null;
   };
 
@@ -45,11 +48,13 @@ export async function fetchMenuCatalog(): Promise<{
     items: rows.map((row) => ({
       id: row.id,
       name: row.name,
+      description: row.description,
       price: Number(row.price),
       image_url: row.image_url,
       is_available: row.is_available,
       category_id: row.categories?.id ?? null,
       category_name: row.categories?.name ?? null,
+      customization_groups: normalizeCustomizationGroups(row.customization_options),
     })),
   };
 }

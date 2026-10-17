@@ -16,8 +16,9 @@ export const DEFAULT_DRINK_OPTIONS: CustomizationGroup[] = [
   {
     name: "Gula",
     options: [
-      { label: "Non Gula", price_delta: 0 },
-      { label: "Gula", price_delta: 0 },
+      { label: "Non Sugar", price_delta: 0 },
+      { label: "Less Sugar", price_delta: 0 },
+      { label: "Sugar", price_delta: 0 },
     ],
   },
   {
@@ -51,6 +52,6 @@ export function toJsonOptions(groups: CustomizationGroup[]): Json {
 /** Ringkasan satu kalimat untuk ditampilkan di form. */
 export function describeOptions(isDrink: boolean): string {
   return isDrink
-    ? "Menu minuman otomatis dapat tombol Gula (Non Gula / Gula) dan Suhu (Ice / Hot)."
+    ? "Menu minuman otomatis dapat tombol Sugar (Non Sugar / Less Sugar / Sugar) dan Suhu (Ice / Hot)."
     : "Menu makanan tidak punya tombol kustomisasi.";
 }

@@ -38,7 +38,7 @@ export default function OwnerLoginForm() {
             <ShieldCheck className="h-5 w-5 text-accent" />
             <CardTitle>Login Owner</CardTitle>
           </div>
-          <CardDescription>Khusus pemilik BD Coffee.</CardDescription>
+          <CardDescription>Khusus pemilik BD Cafe.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={formAction} className="space-y-4">

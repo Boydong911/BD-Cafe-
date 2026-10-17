@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart, Minus, Plus, Trash2 } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import {
   Sheet,
   SheetClose,
@@ -14,16 +14,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/lib/cart/cart-context";
-
-const formatPrice = (price: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(price);
+import { CartItemList, formatPrice } from "@/components/customer/cart-items";
 
 export function CartSheet() {
-  const { items, updateQuantity, removeItem, totalItems, totalPrice, session, setManualSession, setCustomerName } =
+  const { items, totalItems, totalPrice, session, setManualSession, setCustomerName } =
     useCart();
 
   return (
@@ -57,74 +51,9 @@ export function CartSheet() {
           </p>
         </SheetHeader>
 
-        {items.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center px-6">
-            <p className="text-center text-sm text-primary-foreground/60">
-              Keranjang masih kosong, yuk pilih menu dulu!
-            </p>
-          </div>
-        ) : (
-          <div className="flex-1 space-y-3 overflow-y-auto px-6 py-4">
-            {items.map((item) => (
-              <div
-                key={item.lineId}
-                className="flex items-start justify-between gap-3 border-b border-white/10 pb-3"
-              >
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">{item.name}</p>
-                  {item.customizations.length > 0 ? (
-                    <p className="text-xs text-primary-foreground/70">
-                      {item.customizations.map((c) => c.label).join(" · ")}
-                    </p>
-                  ) : (
-                    item.description && (
-                      <p className="line-clamp-1 text-xs text-primary-foreground/50">
-                        {item.description}
-                      </p>
-                    )
-                  )}
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <span className="text-xs text-primary-foreground/70">
-                      {formatPrice(item.price)}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-5 w-5 border-white/30 bg-transparent text-primary-foreground hover:bg-white/10"
-                        onClick={() => updateQuantity(item.lineId, item.quantity - 1)}
-                      >
-                        <Minus className="h-2.5 w-2.5" />
-                      </Button>
-                      <span className="w-4 text-center text-xs font-medium">
-                        {item.quantity}
-                      </span>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-5 w-5 border-white/30 bg-transparent text-primary-foreground hover:bg-white/10"
-                        onClick={() => updateQuantity(item.lineId, item.quantity + 1)}
-                      >
-                        <Plus className="h-2.5 w-2.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-1.5">
-                  <p className="text-sm font-semibold">
-                    {formatPrice(item.price * item.quantity)}
-                  </p>
-                  <button
-                    onClick={() => removeItem(item.lineId)}
-                    className="text-primary-foreground/50 transition-colors hover:text-red-400"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <CartItemList />
+        </div>
 
         <div className="space-y-3 border-t border-white/10 px-6 py-4">
           {/* Pesanan Atas Nama — di atas blok meja */}

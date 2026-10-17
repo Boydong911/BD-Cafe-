@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { OrderCard } from "@/components/admin/order-card";
 import { ReceiptPrint } from "@/components/admin/receipt-print";
 import { MenuCatalog } from "@/components/customer/menu-catalog";
+import { CartItemList, formatPrice } from "@/components/customer/cart-items";
+import { Button } from "@/components/ui/button";
+import { useCart } from "@/lib/cart/cart-context";
 import type { CategoryFilterGroup } from "@/components/category-filter";
 import type { MenuCardItem } from "@/components/customer/menu-card";
 import type { KasirOrder, OrderStatus } from "@/types/order";
@@ -74,6 +78,7 @@ export function KasirBoard({
   categoryGroups: CategoryFilterGroup[];
 }) {
   const router = useRouter();
+  const { totalItems, totalPrice } = useCart();
   const [tabKey, setTabKey] = useState<"pesan" | "alur">("alur");
   const [filterKey, setFilterKey] = useState("aktif");
   // Pesanan yang struknya sedang dicetak.
@@ -246,11 +251,45 @@ export function KasirBoard({
       </div>
 
       {tabKey === "pesan" ? (
-        <MenuCatalog
-          items={menuItems}
-          groups={categoryGroups}
-          tableParam={null}
-        />
+        /*
+         * 75 : 25 -- katalog di kiri, isi keranjang di kanan.
+         *
+         * Panel keranjang memakai komponen yang sama dengan sheet keranjang di
+         * halaman customer, jadi isi dan tombolnya tidak berbeda.
+         * `CartItemList` bergaya panel gelap, jadi panel di sini juga gelap
+         * supaya kontrasnya benar.
+         */
+        <div className="grid gap-4 lg:grid-cols-[3fr_1fr]">
+          <MenuCatalog
+            items={menuItems}
+            groups={categoryGroups}
+            tableParam={null}
+          />
+
+          <aside className="flex flex-col rounded-xl bg-primary p-4 text-primary-foreground">
+            <h2 className="font-serif text-lg">Keranjang</h2>
+            <p className="mb-3 text-xs text-primary-foreground/60">
+              {totalItems > 0 ? `${totalItems} item dipilih` : "Belum ada item"}
+            </p>
+
+            <CartItemList className="flex-1 space-y-3 overflow-y-auto" />
+
+            <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
+              <div className="flex items-center justify-between text-base font-semibold">
+                <span>Total</span>
+                <span>{formatPrice(totalPrice)}</span>
+              </div>
+              <Button
+                asChild
+                size="lg"
+                disabled={totalItems === 0}
+                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+              >
+                <Link href="/checkout">Lanjut ke Checkout</Link>
+              </Button>
+            </div>
+          </aside>
+        </div>
       ) : (
         <>
       {/*

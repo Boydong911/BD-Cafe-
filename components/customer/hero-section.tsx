@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { LandingNav } from "@/components/customer/landing-nav";
+import { SiteNav } from "@/components/customer/site-nav";
 import {
   MenuShowcaseSlider,
   type ShowcaseMenuItem,
@@ -11,7 +11,7 @@ export function HeroSection({ menuItems }: { menuItems: ShowcaseMenuItem[] }) {
   return (
     <section className="relative flex min-h-dvh flex-col overflow-hidden bg-primary lg:h-screen lg:flex-row">
       {/* Navbar melayang di atas hero */}
-      <LandingNav />
+      <SiteNav overlay />
 
       {/* Background foto */}
       <div className="absolute inset-0 bg-[url('/hero-bg.jpg')] bg-cover bg-center" />
@@ -24,7 +24,7 @@ export function HeroSection({ menuItems }: { menuItems: ShowcaseMenuItem[] }) {
       <div className="relative z-10 flex flex-1 flex-col justify-center px-6 pb-16 pt-24 sm:px-10 lg:px-16 lg:pt-16">
         <Image
           src="/logo-hero-white.png"
-          alt="BD Coffee"
+          alt="BD Cafe"
           width={200}
           height={80}
           className="mb-6 h-auto w-44 object-contain sm:w-52"

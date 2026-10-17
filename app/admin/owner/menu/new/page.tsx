@@ -26,7 +26,7 @@ export default async function NewMenuPage() {
       <div>
         <h1 className="text-2xl font-bold">Tambah Menu</h1>
         <p className="text-sm text-muted-foreground">
-          Isi detail menu baru untuk katalog BD Coffee.
+          Isi detail menu baru untuk katalog BD Cafe.
         </p>
       </div>
       <MenuForm mode="create" categories={categories} />

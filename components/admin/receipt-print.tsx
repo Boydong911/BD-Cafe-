@@ -55,8 +55,8 @@ export function ReceiptPrint({
   return (
     <div className="print-area font-mono text-[11px] leading-snug">
       <div className="text-center">
-        <p className="font-serif text-base font-bold">BD COFFEE</p>
-        <p>Jl. Contoh No. 1, BD Coffee</p>
+        <p className="font-serif text-base font-bold">BD CAFE</p>
+        <p>Jl. Contoh No. 1, BD Cafe</p>
         <p>{waktu}</p>
       </div>
 

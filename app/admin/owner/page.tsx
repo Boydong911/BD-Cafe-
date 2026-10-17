@@ -76,7 +76,7 @@ export default async function OwnerOverviewPage() {
         <div>
           <h1 className="font-serif text-2xl font-bold text-foreground">Ringkasan</h1>
           <p className="text-sm text-muted-foreground">
-            Performa BD Coffee hari ini.
+            Performa BD Cafe hari ini.
           </p>
         </div>
         <Link
