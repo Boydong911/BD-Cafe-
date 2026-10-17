@@ -25,15 +25,20 @@ export type MenuCardItem = {
   customization_groups: CustomizationGroup[];
 };
 
+const WRAP =
+  "flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md";
+
 /**
- * Kartu katalog.
+ * Kartu katalog. Bentuknya ditentukan oleh ada-tidaknya `?table=`.
  *
- * Drink  : gambar, nama, tombol Gula (Non Sugar / Less Sugar / Sugar),
- *          tombol Suhu (Ice / Hot), jumlah, tombol keranjang.
- * Makanan: gambar, nama, jumlah, tombol keranjang. Tanpa tombol kustomisasi.
+ *  - Tanpa `?table=` (mis. /menu): hanya gambar + nama. Ini halaman
+ *    "lihat-lihat", belum ada meja yang dituju, jadi tombol pesan
+ *    tidak muncul.
+ *  - Dengan `?table=` (mis. /menu?table=02): pelanggan sedang duduk di
+ *    meja itu, jadi kustomisasi, jumlah, dan tombol keranjang muncul
+ *    supaya pesan bisa langsung dari kartu.
  *
- * Jumlah opsi ditampilkan SEMUA, bukan dipotong. Kalau nanti ada menu dengan
- * lebih dari tiga pilihan, tombolnya tetap utuh.
+ * Tidak ada prop baru untuk ini -- `tableParam` sudah ada.
  */
 export function MenuCard({
   item,
@@ -42,6 +47,61 @@ export function MenuCard({
   item: MenuCardItem;
   tableParam: string | null;
 }) {
+  const href = tableParam ? `/menu/${item.id}?table=${tableParam}` : `/menu/${item.id}`;
+
+  return (
+    <div className={WRAP}>
+      <MenuCardTop item={item} href={href} />
+      {tableParam && <MenuCardControls item={item} />}
+    </div>
+  );
+}
+
+/** Blok atas kartu: gambar + nama. Dipakai di kedua bentuk kartu. */
+function MenuCardTop({ item, href }: { item: MenuCardItem; href: string }) {
+  return (
+    <Link href={href} className="group block">
+      <div className="relative aspect-square w-full bg-muted">
+        {item.image_url ? (
+          <Image
+            src={item.image_url}
+            alt={item.name}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className={`object-cover transition-transform group-hover:scale-105 ${
+              item.is_available ? "" : "grayscale"
+            }`}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+            <ImageOff className="h-8 w-8" />
+          </div>
+        )}
+
+        {!item.is_available && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+            <Badge variant="destructive">Stok Habis</Badge>
+          </div>
+        )}
+      </div>
+
+      <p className="p-3 text-center text-sm font-semibold leading-snug">
+        {item.name}
+      </p>
+    </Link>
+  );
+}
+
+/**
+ * Kustomisasi + jumlah + tombol keranjang. Hanya muncul kalau kartu dibuka
+ * lewat `?table=`.
+ *
+ * Drink  : Gula (Non Sugar / Less Sugar / Sugar) dan Suhu (Ice / Hot)
+ * Makanan: tidak ada tombol kustomisasi, cuma jumlah dan keranjang.
+ *
+ * Semua opsi ditampilkan, bukan dipotong, supaya tiga pilihan gula muat.
+ */
+function MenuCardControls({ item }: { item: MenuCardItem }) {
   const { addItem } = useCart();
   const [qty, setQty] = useState(1);
 
@@ -71,8 +131,6 @@ export function MenuCard({
   const unitPrice =
     item.price + customizations.reduce((sum, c) => sum + c.price_delta, 0);
 
-  const href = tableParam ? `/menu/${item.id}?table=${tableParam}` : `/menu/${item.id}`;
-
   function handleAddToCart() {
     addItem(
       {
@@ -89,38 +147,7 @@ export function MenuCard({
   }
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md">
-      <Link href={href} className="group block">
-        <div className="relative aspect-square w-full bg-muted">
-          {item.image_url ? (
-            <Image
-              src={item.image_url}
-              alt={item.name}
-              fill
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className={`object-cover transition-transform group-hover:scale-105 ${
-                disabled ? "grayscale" : ""
-              }`}
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-              <ImageOff className="h-8 w-8" />
-            </div>
-          )}
-
-          {disabled && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-              <Badge variant="destructive">Stok Habis</Badge>
-            </div>
-          )}
-        </div>
-
-        <p className="p-3 text-center text-sm font-semibold leading-snug">
-          {item.name}
-        </p>
-      </Link>
-
-      {/* Opsi kustomisasi: satu baris per grup. Menu makanan punya 0 grup. */}
+    <>
       {groups.length > 0 && (
         <div className="space-y-1.5 px-3 pb-1">
           {groups.map((g) => (
@@ -148,7 +175,6 @@ export function MenuCard({
         </div>
       )}
 
-      {/* Jumlah + tombol keranjang. Food juga punya baris ini. */}
       <div className="mt-auto flex items-center gap-2 p-3 pt-2">
         <div className="flex items-center gap-1 rounded-md border">
           <button
@@ -182,6 +208,6 @@ export function MenuCard({
           <ShoppingBag className="h-4 w-4" />
         </button>
       </div>
-    </div>
+    </>
   );
 }
