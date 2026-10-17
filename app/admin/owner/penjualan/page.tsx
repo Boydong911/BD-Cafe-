@@ -1,8 +1,9 @@
-import { Wallet, Receipt, PiggyBank, ShoppingBag } from "lucide-react";
+import { Wallet, Receipt, PiggyBank, ShoppingBag, Clock, CheckCircle2 } from "lucide-react";
 import { SalesChart } from "@/components/admin/sales-chart";
 import { SalesFilter } from "@/components/admin/sales-filter";
 import { StatCard } from "@/components/admin/stat-card";
 import { TopMenuList } from "@/components/admin/top-menu-list";
+import { OrderListTable } from "@/components/admin/order-list-table";
 import {
   DEFAULT_PERIOD,
   PERIOD_LABELS,
@@ -17,6 +18,7 @@ import {
   fetchTopMenu,
   summarize,
 } from "@/lib/sales";
+import { fetchOrderList, splitByCompletion, totalsOf } from "@/lib/order-list";
 
 // Laporan ikut berubah saat kasir memperbarui status pesanan.
 export const dynamic = "force-dynamic";
@@ -34,14 +36,21 @@ export default async function OwnerSalesPage({
   const period = parsePeriod(params.period, DEFAULT_PERIOD[preset]);
   const range = resolveRange(preset);
 
-  const [rows, topMenu] = await Promise.all([
+  const [rows, topMenu, orderList] = await Promise.all([
     fetchSalesReport(period, range.start, range.end),
     fetchTopMenu(range.start, range.end, 5),
+    fetchOrderList(range.start, range.end),
   ]);
 
   const total = summarize(rows);
   const avgOrder = averageOrderValue(total);
   const hasData = rows.length > 0;
+
+  // Pisahkan yang masih berjalan dari yang sudah final, supaya owner langsung
+  // melihat uang mana yang belum masuk.
+  const { pending, settled } = splitByCompletion(orderList);
+  const pendingTotals = totalsOf(pending);
+  const settledTotals = totalsOf(settled);
 
   // `min-w-0` mencegah grid melebar melewati layar HP
   return (
@@ -100,6 +109,67 @@ export default async function OwnerSalesPage({
           5 Menu Terlaris
         </h2>
         <TopMenuList items={topMenu} />
+      </div>
+
+      {/*
+        Pesanan yang belum final dipisah dari yang sudah final. Angka di kartu
+        "Sedang Berjalan" sengaja TIDAK ikut masuk ke omzet di atas, supaya
+        owner tidak salah kira uang yang belum masuk sudah terjual.
+      */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="font-serif text-lg font-semibold text-foreground">
+            Pesanan Sedang Berjalan
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Belum lunas atau belum diselesaikan kasir. Belum termasuk omzet di
+            atas.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <StatCard
+            label="Jumlah Pesanan Berjalan"
+            value={`${pendingTotals.count} pesanan`}
+            hint={
+              pendingTotals.count === 0
+                ? "Semua pesanan sudah final"
+                : "Masih menunggu pembayaran atau penyelesaian"
+            }
+            icon={Clock}
+            tone={pendingTotals.count > 0 ? "warning" : "default"}
+          />
+          <StatCard
+            label="Nilai Belum Masuk"
+            value={rupiah(pendingTotals.total)}
+            hint={`Dari ${settledTotals.count} pesanan sudah selesai: ${rupiah(settledTotals.total)}`}
+            icon={CheckCircle2}
+            tone={pendingTotals.count > 0 ? "warning" : "positive"}
+          />
+        </div>
+
+        <OrderListTable rows={pending} />
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <h2 className="font-serif text-lg font-semibold text-foreground">
+              Riwayat Pesanan
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Semua pesanan pada rentang ini, sudah lunas maupun belum.
+            </p>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {orderList.length} pesanan ·{" "}
+            {rupiah(
+              orderList.reduce((sum, row) => sum + row.total, 0)
+            )}
+          </p>
+        </div>
+
+        <OrderListTable rows={orderList} />
       </div>
     </div>
   );

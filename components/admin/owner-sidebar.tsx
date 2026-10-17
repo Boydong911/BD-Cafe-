@@ -94,7 +94,8 @@ export function OwnerSidebar({ ownerName }: { ownerName?: string | null }) {
           </button>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3">
+        {/* Nav boleh digulir sendiri; area bawah tetap terlihat. */}
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
           {navItems.map(({ href, label, icon: Icon, exact }) => {
             const isActive = exact ? pathname === href : pathname.startsWith(href);
             return (
@@ -116,7 +117,8 @@ export function OwnerSidebar({ ownerName }: { ownerName?: string | null }) {
           })}
         </nav>
 
-        <div className="space-y-1 border-t border-white/10 px-3 py-4">
+        {/* Area bawah menempel di sidebar, tidak ikut menjauh saat digulir. */}
+        <div className="shrink-0 space-y-1 border-t border-white/10 px-3 py-3">
           <Link
             href="/admin/owner/pengaturan"
             onClick={() => setOpen(false)}

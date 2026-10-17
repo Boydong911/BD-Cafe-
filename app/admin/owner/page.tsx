@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Activity,
   Clock,
+  CheckCircle2,
 } from "lucide-react";
 import { SalesChart } from "@/components/admin/sales-chart";
 import { StatCard } from "@/components/admin/stat-card";
@@ -27,6 +28,7 @@ import {
   summarize,
 } from "@/lib/sales";
 import { fetchUnseenRegistrations } from "@/lib/registrations";
+import { fetchOrderList, splitByCompletion, totalsOf } from "@/lib/order-list";
 
 // Ringkasan ikut berubah saat kasir memperbarui status pesanan.
 export const dynamic = "force-dynamic";
@@ -41,16 +43,24 @@ export default async function OwnerOverviewPage() {
   const weekStart = addDays(todayStart, -6);
   const weekEnd = endOfWibDay(now);
 
-  const [rows, topMenu, active, registrations] = await Promise.all([
+  const [rows, topMenu, active, registrations, todayOrders] = await Promise.all([
     fetchSalesReport("day", weekStart, weekEnd),
     fetchTopMenu(weekStart, weekEnd, 5),
     fetchActiveOrderCount(),
     fetchUnseenRegistrations(),
+    fetchOrderList(todayStart, weekEnd),
   ]);
 
   const todayRows = rows.filter((row) => wibDateKey(new Date(row.bucket)) === todayKey);
   const today = summarize(todayRows);
   const week = summarize(rows);
+
+  // Daftar pesanan hari ini dipisah dari grafik agregat, karena grafik
+  // menghitung semua pesanan yang tidak dibatalkan (termasuk yang belum
+  // dibayar). Owner butuh tahu mana yang uangnya benar-benar sudah masuk.
+  const { pending: todayPending, settled: todaySettled } =
+    splitByCompletion(todayOrders);
+  const todayPendingTotals = totalsOf(todayPending);
 
   return (
     <div className="space-y-6">
@@ -127,6 +137,31 @@ export default async function OwnerOverviewPage() {
           </p>
         </div>
         <SalesChart rows={rows} period="day" />
+      </div>
+
+      {/*
+        Pemisahan "sudah final" vs "masih berjalan" untuk hari ini. Grafik di
+        atas menghitung semua pesanan yang tidak dibatalkan, termasuk yang
+        uangnya belum masuk — jadi kartu ini yang memperjelas agar owner tidak
+        salah baca.
+      */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <StatCard
+          label="Sudah Final Hari Ini"
+          value={`${todaySettled.length} pesanan`}
+          hint={`${rupiah(
+            todaySettled.reduce((sum, row) => sum + row.total, 0)
+          )} — lunas & selesai`}
+          icon={CheckCircle2}
+          tone="positive"
+        />
+        <StatCard
+          label="Masih Berjalan Hari Ini"
+          value={`${todayPendingTotals.count} pesanan`}
+          hint={`${rupiah(todayPendingTotals.total)} belum masuk`}
+          icon={Clock}
+          tone={todayPendingTotals.count > 0 ? "warning" : "default"}
+        />
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
