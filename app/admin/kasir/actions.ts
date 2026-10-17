@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import type { OrderStatus, PaymentStatus } from "@/types/order";
+import type {
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from "@/types/order";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -97,7 +101,28 @@ export async function updateOrderStatus(
   return { success: true };
 }
 
-export async function confirmPayment(orderId: string): Promise<ActionResult> {
+/**
+ * Satu tombol "Konfirmasi Bayar" untuk TUNAI maupun QRIS.
+ *
+ * Bedanya hanya di apakah pembayaran masih perlu dicatat di server:
+ *
+ *  - TUNAI: customer belum bayar. Kasir yang menerima uang, jadi kasir-lah
+ *    yang mengubah payment_status jadi 'paid' (lewat RPC confirm_cash_payment).
+ *
+ *  - QRIS: customer sudah menekan "Sudah Bayar" di halamannya sendiri, jadi
+ *    payment_status sudah 'paid' sebelum kasir menyentuhnya. Yang perlu
+ *    dilakukan kasir hanya memindahkan status ke "ready" dan mencetak struk.
+ *    Memanggil RPC pembayaran di sini tidak akan mengubah apa pun karena
+ *    syaratnya sudah terpenuhi, makanya jalur itu dilewati.
+ *
+ * `@param paymentMethod` dikirim dari client sesuai badge pada kartu order.
+ * Nilainya tetap divalidasi ulang di server dari database, bukan dipercaya
+ * begitu saja -- kalau tidak, client bisa mengirim 'cash' untuk pesanan QRIS.
+ */
+export async function confirmPayment(
+  orderId: string,
+  paymentMethod: PaymentMethod = "cash"
+): Promise<ActionResult> {
   if (!z.string().uuid().safeParse(orderId).success) {
     return { success: false, error: "Data tidak valid." };
   }
@@ -106,61 +131,98 @@ export async function confirmPayment(orderId: string): Promise<ActionResult> {
   if (!ok) return { success: false, error: "Akses ditolak." };
 
   /*
-   * Memakai RPC `confirm_cash_payment`, bukan `.update()` langsung.
-   *
-   * Alasannya: update langsung harus lolos policy RLS, sementara jalur QRIS
-   * (confirm_qris_payment) jalan lewat function SECURITY DEFINER yang bypass
-   * RLS. lalu yang tidak konsisten antar dua jalur pembayaran.
+   * Metode pembayaran dibaca ulang dari database. Nilai yang dikirim client
+   * hanya petunjuk untuk memilih jalur mana yang relevan; keputusan sebenarnya
+   * ikut data server.
    */
-  const { data, error } = await supabase.rpc("confirm_cash_payment", {
-    p_order_id: orderId,
-  });
-
-  if (error) {
-    // Pesan asli dicetak ke log server supaya bisa dibaca developer.
-    // Untuk kasir tetap dipakai kalimat yang bisa dipahami.
-    console.error(
-      "[kasir] confirm_cash_payment gagal:",
-      error.code,
-      error.message,
-      error.details,
-      error.hint
-    );
-    return { success: false, error: "Gagal konfirmasi pembayaran." };
-  }
-
-  // `false` = tidak ada baris yang berubah (sudah dibayar / sudah dibatalkan).
-  if (data !== true) {
-    return {
-      success: false,
-      error: "Pesanan sudah dibayar atau sudah dibatalkan.",
-    };
-  }
-
-  /*
-   * Payment sudah lunas. Sekarang pesanan LANGSUNG ditandai jadi "ready"
-   * (Siap Disajikan) supaya kasir tidak perlu klik "Mulai Dibuat" dulu.
-   *
-   * Dicoba idempoten: kalau pesanan sudah "ready" atau "completed", tidak
-   * ada yang perlu diubah dan ini bukan error.
-   */
-  const { data: current } = await supabase
+  const { data: row, error: fetchError } = await supabase
     .from("orders")
-    .select("status")
+    .select("status, payment_method, payment_status")
     .eq("id", orderId)
     .single();
 
-  const status = (current as unknown as { status?: OrderStatus } | null)?.status;
+  if (fetchError || !row) {
+    return { success: false, error: "Pesanan tidak ditemukan." };
+  }
 
-  if (status && status !== "ready" && status !== "completed" && status !== "cancelled") {
-    const { error: statusError } = await supabase
-      .from("orders")
-      .update({ status: "ready" })
-      .eq("id", orderId);
+  const cur = row as unknown as {
+    status: OrderStatus;
+    payment_method: PaymentMethod;
+    payment_status: PaymentStatus;
+  };
 
-    if (statusError) {
-      console.error("[kasir] update status ready gagal:", statusError.message);
+  if (cur.status === "cancelled") {
+    return { success: false, error: "Pesanan sudah dibatalkan." };
+  }
+
+  const method = cur.payment_method ?? paymentMethod;
+
+  /*
+   * TUNAI: pembayaran harus dicatat lewat RPC SECURITY DEFINER.
+   * Update langsung tidak bisa dipakai karena harus lolos policy RLS, dan
+   * jalur ini sama sekali tidak boleh longgar agar data pesanan tidak bocor.
+   */
+  if (method === "cash") {
+    const { data, error } = await supabase.rpc("confirm_cash_payment", {
+      p_order_id: orderId,
+    });
+
+    if (error) {
+      // Pesan asli dicetak ke log server supaya bisa dibaca developer.
+      console.error(
+        "[kasir] confirm_cash_payment gagal:",
+        error.code,
+        error.message,
+        error.details,
+        error.hint
+      );
+      return { success: false, error: "Gagal konfirmasi pembayaran." };
     }
+
+    // `false` = tidak ada baris berubah, artinya sudah dibayar atau dibatalkan.
+    if (data !== true) {
+      return {
+        success: false,
+        error: "Pesanan sudah dibayar atau sudah dibatalkan.",
+      };
+    }
+  }
+
+  /*
+   * QRIS: pembayaran sudah 'paid' dari sisi customer. Tidak ada RPC yang perlu
+   * dipanggil -- cukup pastikan lunas, kalau ternyata belum (mis. customer
+   * belum menekan tombolnya) panggil confirm_qris_payment.
+   */
+  if (method === "qris" && cur.payment_status !== "paid") {
+    const { data, error } = await supabase.rpc("confirm_qris_payment", {
+      p_order_id: orderId,
+    });
+
+    if (error) {
+      console.error("[kasir] confirm_qris_payment gagal:", error.message);
+      return { success: false, error: "Gagal konfirmasi pembayaran." };
+    }
+
+    if (data !== true) {
+      return { success: false, error: "Gagal konfirmasi pembayaran." };
+    }
+  }
+
+  /*
+   * Pembayaran beres. Pesanan LANGSUNG ditandai "ready" (Siap Disajikan)
+   * supaya kasir tidak perlu klik "Mulai Dibuat" dulu.
+   *
+   * Idempoten: kalau sudah "ready"/"completed", tidak ada yang diubah dan
+   * ini bukan error -- tombolnya sengaja tetap bisa ditekan untuk cetak struk.
+   */
+  const { error: statusError } = await supabase
+    .from("orders")
+    .update({ status: "ready" })
+    .eq("id", orderId)
+    .not("status", "in", "(ready,completed,cancelled)");
+
+  if (statusError) {
+    console.error("[kasir] update status ready gagal:", statusError.message);
   }
 
   revalidatePath("/admin/kasir");

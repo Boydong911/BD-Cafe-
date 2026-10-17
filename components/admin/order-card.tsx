@@ -117,11 +117,15 @@ export function OrderCard({
    * Struk dicetak otomatis sesuai permintaan owner, jadi kasir tidak perlu
    * klik tombol cetak terpisah. Status "ready" sudah ikut diuruskan di
    * server action confirmPayment().
+   *
+   * Metode pembayaran ikut dikirim supaya server bisa memilih jalur yang
+   * benar. Server tetap membacanya ulang dari database, jadi nilai di sini
+   * bukan sumber kebenaran -- hanya petunjuk.
    */
   function handleConfirmPayment() {
     setError(null);
     startTransition(async () => {
-      const res = await confirmPayment(order.id);
+      const res = await confirmPayment(order.id, order.payment_method);
 
       // Pakai operator `in` alih-alih `!res.success`: project ini `strict: false`
       // dan tanpa strictNullChecks TypeScript tidak memerncetkan union ini.
