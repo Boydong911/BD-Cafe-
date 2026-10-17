@@ -25,7 +25,7 @@ const NAV_ITEMS = [
 /**
  * Navbar BD Cafe.
  *
- * Latar selalu hitam 30% (`bg-black/30`) dan logo selalu putih, jadi navbar
+ * Latar selalu hitam 80% (`bg-black/80`) dan logo selalu putih, jadi navbar
  * di halaman depan yang gelap dan di /menu yang terang tetap terbaca tanpa
  * filter apa pun pada logo.
  *
@@ -44,7 +44,7 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
   return (
     <header
       className={cn(
-        "z-20 bg-black/30 backdrop-blur-sm",
+        "z-20 bg-black/80 backdrop-blur-sm",
         overlay ? "absolute inset-x-0 top-0" : "sticky top-0"
       )}
     >
@@ -110,7 +110,7 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
       </div>
 
       {open && (
-        <nav className="border-t border-white/10 bg-black/60 px-5 py-3 text-white backdrop-blur lg:hidden">
+        <nav className="border-t border-white/10 bg-black/90 px-5 py-3 text-white backdrop-blur lg:hidden">
           {NAV_ITEMS.map((item) =>
             item.href ? (
               <Link
