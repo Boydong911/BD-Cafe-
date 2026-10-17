@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle2, Clock, Loader2, Store } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, Clock, Loader2, Store } from "lucide-react";
 import { confirmQrisPayment, expireOrder } from "../actions";
 import { PAYMENT_WINDOW_MINUTES } from "@/lib/payment";
 
@@ -107,13 +108,31 @@ function CashBox({ orderId }: { orderId: string }) {
         </p>
       </div>
 
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={() => router.push(`/order/${orderId}`)}
-      >
-        Lihat Detail Pesanan
-      </Button>
+      <div className="space-y-2">
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => router.push(`/order/${orderId}`)}
+        >
+          Lihat Detail Pesanan
+        </Button>
+
+        {/*
+          Pelanggan sering mau lihat-lihat menu lagi sambil antre di kasir.
+          Pergi ke /menu tidak membatalkan pesanan -- statusnya tetap
+          "menunggu bayar" dan kasir masih melihatnya di board.
+
+          Catatan: begitu pindah halaman, polling di useRealtimePayment ikut
+          berhenti. Pelanggan yang kembali nanti harus buka lagi halaman
+          status lewat link yang diberikan kasir.
+        */}
+        <Button asChild variant="ghost" className="w-full text-muted-foreground">
+          <Link href="/menu">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Kembali ke Menu
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 }
@@ -259,6 +278,25 @@ function QrisBox({
       <p className="text-center text-xs text-muted-foreground">
         Sudah transfer? Klik tombol di atas untuk langsung dapat nomor antrean.
       </p>
+
+      {/*
+        Punya timer 15 menit yang tetap berjalan meski pelanggan pindah halaman.
+        Beri tahu supaya dia tahu harus balik lagi sebelum waktu habis --
+        kalau tidak, pesanan dibatalkan diam-diam dan pelanggan mengira
+        pesan-nya hilang.
+      */}
+      <div className="space-y-2 border-t pt-4">
+        <Button asChild variant="outline" className="w-full">
+          <Link href="/menu">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Kembali ke Menu
+          </Link>
+        </Button>
+        <p className="text-center text-[11px] text-muted-foreground">
+          Pergi dulu boleh — pesanan ini tetap menunggu pembayaran sampai{" "}
+          {PAYMENT_WINDOW_MINUTES} menit lagi.
+        </p>
+      </div>
     </div>
   );
 }
@@ -276,7 +314,10 @@ function ExpiredBox() {
         Batas waktu 15 menit untuk pembayaran sudah lewat, jadi pesanan ini otomatis dibatalkan.
       </p>
       <Button asChild variant="outline" className="w-full">
-        <a href="/menu">Kembali ke Menu</a>
+        <Link href="/menu">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Kembali ke Menu
+        </Link>
       </Button>
     </div>
   );
