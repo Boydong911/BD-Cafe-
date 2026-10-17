@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import Image from "next/image";
 import { MenuCatalog } from "@/components/customer/menu-catalog";
 import { SiteNav } from "@/components/customer/site-nav";
 import { TableSessionSync } from "@/components/customer/table-session-sync";
@@ -38,7 +39,14 @@ export default async function MenuPage({
 
   return (
     <div className="min-h-dvh">
-      <SiteNav />
+      {/*
+        Navbar hanya untuk halaman katalog (/menu tanpa ?table=).
+
+        Kalau pelanggan datang dari QR meja, layar HP-nya sudah penuh dengan
+        tombol pesan di setiap kartu -- navbar hanya memakan ruang dan
+        menjauhkan menu dari jangkauan ibu jari. Logo di bawah yang menggantikannya.
+      */}
+      {!table && <SiteNav />}
 
       <div className="mx-auto max-w-5xl space-y-6 p-4 pb-24 sm:p-6">
       <Suspense fallback={null}>
@@ -46,6 +54,17 @@ export default async function MenuPage({
       </Suspense>
 
       <div className="flex flex-col items-center gap-2 text-center">
+        {table && (
+          <Image
+            src="/LOGO.png"
+            alt="BD Cafe"
+            width={88}
+            height={88}
+            priority
+            className="h-20 w-20 object-contain sm:h-24 sm:w-24"
+          />
+        )}
+
         <h1 className="font-serif text-3xl font-bold">BD Cafe Menu</h1>
         {table && (
           <p className="text-sm text-muted-foreground">
