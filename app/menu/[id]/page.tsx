@@ -6,6 +6,7 @@ import { MenuDetail } from "@/components/customer/menu-detail";
 import { TableSessionSync } from "@/components/customer/table-session-sync";
 import { normalizeCustomizationGroups } from "@/lib/menu-customizations";
 import { menuHref } from "@/lib/menu-href";
+import { tableTitle } from "@/lib/page-title";
 
 export const revalidate = 0; // selalu ambil stok & harga terbaru
 
@@ -42,20 +43,30 @@ const fetchItem = cache(async (id: string) => {
 
 /*
  * Berbeda dari halaman lain, judul di sini memakai nama menunya:
- * "Kopi Susu Gula Aren-BD Cafe". Ini yang muncul di tab browser saat
+ * "Kopi Susu Gula Aren - BD Cafe". Ini yang muncul di tab browser saat
  * pelanggan menyimpan halaman atau mengirimkannya ke grup.
+ *
+ * Kalau dibuka lewat `?table=`, nomor meja ikut di depan supaya kasir
+ * tahu tanpa harus bertanya:
+ *   "Our Menu Meja No 02 - Kopi Susu Gula Aren - BD Cafe"
  */
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ table?: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
+  const [{ id }, { table }] = await Promise.all([params, searchParams]);
+
   const { data } = await fetchItem(id);
   const row = data as unknown as DetailRow | null;
 
+  const name = row?.name ?? "Menu";
+  const prefix = tableTitle(table);
+
   return {
-    title: row?.name ?? "Menu",
+    title: prefix ? `${prefix} - ${name}` : name,
     description: row?.description ?? undefined,
   };
 }

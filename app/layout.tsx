@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Lora, Plus_Jakarta_Sans } from "next/font/google";
 import "@/app/globals.css";
 import { CartProvider } from "@/lib/cart/cart-context";
+import { SITE_NAME, TITLE_TEMPLATE } from "@/lib/page-title";
 
 const fontHeading = Lora({
   subsets: ["latin"],
@@ -19,14 +20,14 @@ export const metadata: Metadata = {
   /*
    * `template` dipakai supaya tiap halaman cukup menulis judul singkatnya
    * saja (`export const metadata = { title: "Kasir" }`) dan hasilnya
-   * otomatis menjadi "Kasir-BD Cafe".
+   * otomatis menjadi "Kasir - BD Cafe".
    *
    * Tanpa template ini, tiap halaman harus menulis ulang nama cafe
    * sendiri -- dan tadi semua tab browser cuma menampilkan "BD Coffee".
    */
   title: {
-    default: "BD Cafe",
-    template: "%s-BD Cafe",
+    default: SITE_NAME,
+    template: TITLE_TEMPLATE,
   },
   description: "Cafe premium — kopi, kenyamanan, cita rasa.",
 };

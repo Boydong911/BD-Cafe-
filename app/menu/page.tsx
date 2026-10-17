@@ -6,13 +6,30 @@ import { TableSessionSync } from "@/components/customer/table-session-sync";
 import type { MenuCardItem } from "@/components/customer/menu-card";
 import { normalizeCustomizationGroups } from "@/lib/menu-customizations";
 import { fetchCategoryTree } from "@/lib/categories";
+import { tableTitle } from "@/lib/page-title";
 import Image from "next/image";
 
 export const revalidate = 0; // selalu ambil data stok terbaru
 
-export const metadata: Metadata = {
-  title: "Menu",
-};
+/*
+ * Harus generateMetadata, bukan metadata statis, karena judulnya
+ * bergantung pada `?table=` di URL.
+ *
+ * Hasil:
+ *   /menu         -> "Menu - BD Cafe"
+ *   /menu?table=02 -> "Our Menu Meja No 02 - BD Cafe"
+ */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ table?: string }>;
+}): Promise<Metadata> {
+  const { table } = await searchParams;
+
+  return {
+    title: tableTitle(table) || "Menu",
+  };
+}
 
 type MenuRow = {
   id: string;

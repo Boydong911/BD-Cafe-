@@ -4,9 +4,10 @@ import { HeroSection } from "@/components/customer/hero-section";
 import { TableSessionSync } from "@/components/customer/table-session-sync";
 import { createClient } from "@/lib/supabase/server";
 import type { ShowcaseMenuItem } from "@/components/customer/menu-showcase-slider";
+import { SITE_NAME } from "@/lib/page-title";
 
 /*
- * Catatan: judul di sini sengaja TANPA akhiran "-BD Cafe".
+ * Catatan: judul di sini sengaja TANPA akhiran " - BD Cafe".
  *
  * Title template dari app/layout.tsx tidak berlaku untuk page.tsx di
  * segmen yang sama -- Next.js hanya menerapkannya ke segmen anak.
@@ -16,7 +17,7 @@ import type { ShowcaseMenuItem } from "@/components/customer/menu-showcase-slide
  * label halaman.
  */
 export const metadata: Metadata = {
-  title: "BD Cafe",
+  title: SITE_NAME,
 };
 
 const FOOD_CATEGORY = "Makanan Ringan";
