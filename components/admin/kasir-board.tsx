@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { OrderCard } from "@/components/admin/order-card";
@@ -26,8 +26,17 @@ const FILTERS: {
   { key: "cancelled", label: "Batal", match: (s) => s === "cancelled" },
 ];
 
-/** Seberapa sering data ditarik ulang sebagai jaring pengaman. */
-const POLL_MS = 5000;
+/**
+ * Seberapa sering data ditarik ulang sebagai jaring pengaman.
+ *
+ * Kasir menunggu pelanggan di depan meja, bukan sedang menghadap layar,
+ * jadi pesanan baru harus terlihat dalam hitungan detik -- bukan lima
+ * detik, karena itu terasa lama.
+ */
+const POLL_MS = 3000;
+
+/** Berapa lama pesanan baru ditandai(disorot) setelah muncul. */
+const NEW_HIGHLIGHT_MS = 20000;
 
 export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
   const router = useRouter();
@@ -36,6 +45,10 @@ export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
   const [printing, setPrinting] = useState<KasirOrder | null>(null);
   // Status koneksi Realtime, ditampilkan sebagai titik kecil di header.
   const [realtimeStatus, setRealtimeStatus] = useState<string>("connecting");
+  // Id pesanan yang baru saja muncul, supaya kasir bisa langsung tahu
+  // mana yang baru tanpa harus membandingkan daftar sendiri.
+  const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
+  const knownIds = useRef<Set<string> | null>(null);
 
   /*
    * Dua lapis pembaruan, karena kasir TIDAK BOLEH menunggu refresh manual:
@@ -91,6 +104,41 @@ export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
     };
   }, [router]);
 
+  /*
+   * Deteksi pesanan baru.
+   *
+   * `knownIds` diisi NULL di render pertama supaya pesanan yang sudah ada saat
+   * halaman dibuka tidak sekaligus ditandai sebagai "baru" — hanya yang
+   * benar-benar muncul SESUDAH halaman terbuka yang dihitung baru.
+   */
+  useEffect(() => {
+    const incoming = new Set(orders.map((o) => o.id));
+
+    if (knownIds.current === null) {
+      knownIds.current = incoming;
+      return;
+    }
+
+    const fresh = [...incoming].filter((id) => !knownIds.current!.has(id));
+
+    if (fresh.length === 0) {
+      // Tidak ada yang baru; cukup selaraskan id yang tersimpan.
+      if (
+        knownIds.current.size !== incoming.size ||
+        [...knownIds.current].some((id) => !incoming.has(id))
+      ) {
+        knownIds.current = incoming;
+      }
+      return;
+    }
+
+    knownIds.current = incoming;
+    setFreshIds(new Set(fresh));
+
+    const timer = setTimeout(() => setFreshIds(new Set()), NEW_HIGHLIGHT_MS);
+    return () => clearTimeout(timer);
+  }, [orders]);
+
   const counts = useMemo(() => {
     const result: Record<string, number> = {};
     for (const f of FILTERS) {
@@ -114,10 +162,9 @@ export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
     <div className="space-y-5">
       {/*
         Indikator koneksi realtime. Kalau titik ini merah, berarti push dari
-        server tidak jalan dan halaman hanya andalkan polling (maksimal 5
-        detik). Berguna sebagai petunjuk kalau nanti ada complaint "pesanan
-        telat muncul" -- kita tahu langsung itu soal koneksi, bukan soal
-        query.
+        server tidak jalan dan halaman hanya andalkan polling. Berguna sebagai
+        petunjuk kalau nanti ada complaint "pesanan telat muncul" -- kita tahu
+        langsung itu soal koneksi, bukan soal query.
       */}
       <div className="flex items-center justify-end gap-1.5 text-[11px] text-muted-foreground">
         <span
@@ -135,7 +182,7 @@ export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
           {realtimeStatus === "SUBSCRIBED"
             ? "Live"
             : realtimeStatus === "CHANNEL_ERROR" || realtimeStatus === "TIMED_OUT"
-              ? "Koneksi terputus — menyegarkan tiap 5 detik"
+              ? `Koneksi terputus — menyegarkan tiap ${POLL_MS / 1000} detik`
               : "Menghubungkan…"}
         </span>
       </div>
@@ -180,6 +227,7 @@ export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
               key={order.id}
               order={order}
               onConfirmPayment={setPrinting}
+              isFresh={freshIds.has(order.id)}
             />
           ))}
         </div>

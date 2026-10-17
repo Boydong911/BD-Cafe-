@@ -80,10 +80,13 @@ function formatCustomizations(value: unknown): string[] {
 export function OrderCard({
   order,
   onConfirmPayment,
+  isFresh = false,
 }: {
   order: KasirOrder;
   /** Dipanggil setelah bayar lunas, supaya kasir-board bisa mencetak struk. */
   onConfirmPayment?: (order: KasirOrder) => void;
+  /** Pesanan baru saja masuk — diberi sorotan supaya kasir tidak melewatinya. */
+  isFresh?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -150,10 +153,19 @@ export function OrderCard({
 
   return (
     <article
-      className={`flex flex-col rounded-xl border bg-background shadow-sm ${
+      className={`relative flex flex-col rounded-xl border bg-background shadow-sm transition-shadow ${
         order.status === "pending" ? "ring-2 ring-accent" : ""
+      } ${
+        // Pesanan baru: sorotan accent + sedikit terangkat supaya mata kasir
+        // langsung tertuju ke-antrean, bukan ke bawah daftar.
+        isFresh ? "ring-2 ring-emerald-500 shadow-lg shadow-emerald-500/20" : ""
       }`}
     >
+      {isFresh && (
+        <span className="absolute -top-2 left-3 z-10 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow">
+          Baru
+        </span>
+      )}
       <header className="flex items-start justify-between gap-3 border-b p-4">
         <div className="min-w-0">
           <p className="truncate font-sans text-sm font-bold">
