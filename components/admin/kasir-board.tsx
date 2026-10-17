@@ -26,20 +26,41 @@ const FILTERS: {
   { key: "cancelled", label: "Batal", match: (s) => s === "cancelled" },
 ];
 
+/** Seberapa sering data ditarik ulang sebagai jaring pengaman. */
+const POLL_MS = 5000;
+
 export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
   const router = useRouter();
   const [filterKey, setFilterKey] = useState("aktif");
   // Pesanan yang struknya sedang dicetak.
   const [printing, setPrinting] = useState<KasirOrder | null>(null);
+  // Status koneksi Realtime, ditampilkan sebagai titik kecil di header.
+  const [realtimeStatus, setRealtimeStatus] = useState<string>("connecting");
 
-  // Realtime: setiap ada perubahan di orders/order_items, refetch data server
+  /*
+   * Dua lapis pembaruan, karena kasir TIDAK BOLEH menunggu refresh manual:
+   *
+   * 1) Realtime (postgres_changes) — cepat, dorongan dari server.
+   *    Ini bisa gagal diam-diam kalau WebSocket terputus, RLS menolak
+   *    langganan, atau Supabase sedang tidak bisa dihubungi.
+   *
+   * 2) Polling tiap POLL_MS — lambat (maksimal POLL_MS detik), tapi selalu
+   *    jalan selama tab terbuka. Ini jaring pengaman, bukan pengganti.
+   *
+   * Tanpa polling, kasir bisa saja menunggu lama hanya karena satu koneksi
+   * websocket putus -- dan pesanan yang tidak terlihat berarti pelanggan
+   * menunggu di kasir tanpa kabar.
+   */
   useEffect(() => {
     const supabase = createClient();
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    let debounce: ReturnType<typeof setTimeout> | undefined;
 
     const refresh = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => router.refresh(), 300);
+      clearTimeout(debounce);
+      // Debounce 300ms: satu pembuatan pesanan memicu INSERT di `orders`
+      // sekaligus beberapa INSERT di `order_items`. Tanpa debounce, satu
+      // pesanan memicu beberapa refresh sia-sia.
+      debounce = setTimeout(() => router.refresh(), 300);
     };
 
     const channel = supabase
@@ -54,10 +75,18 @@ export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
         { event: "INSERT", schema: "public", table: "order_items" },
         refresh
       )
-      .subscribe();
+      .subscribe((status) => {
+        setRealtimeStatus(status);
+      });
+
+    const poller = setInterval(() => {
+      if (document.hidden) return; // hemat request saat tab di belakang
+      router.refresh();
+    }, POLL_MS);
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(debounce);
+      clearInterval(poller);
       supabase.removeChannel(channel);
     };
   }, [router]);
@@ -83,6 +112,34 @@ export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
 
   return (
     <div className="space-y-5">
+      {/*
+        Indikator koneksi realtime. Kalau titik ini merah, berarti push dari
+        server tidak jalan dan halaman hanya andalkan polling (maksimal 5
+        detik). Berguna sebagai petunjuk kalau nanti ada complaint "pesanan
+        telat muncul" -- kita tahu langsung itu soal koneksi, bukan soal
+        query.
+      */}
+      <div className="flex items-center justify-end gap-1.5 text-[11px] text-muted-foreground">
+        <span
+          className={`inline-block h-1.5 w-1.5 rounded-full ${
+            realtimeStatus === "SUBSCRIBED"
+              ? "bg-emerald-500"
+              : realtimeStatus === "CHANNEL_ERROR" ||
+                  realtimeStatus === "TIMED_OUT"
+                ? "bg-destructive"
+                : "bg-amber-500"
+          }`}
+          aria-hidden
+        />
+        <span>
+          {realtimeStatus === "SUBSCRIBED"
+            ? "Live"
+            : realtimeStatus === "CHANNEL_ERROR" || realtimeStatus === "TIMED_OUT"
+              ? "Koneksi terputus — menyegarkan tiap 5 detik"
+              : "Menghubungkan…"}
+        </span>
+      </div>
+
       <div className="-mx-4 overflow-x-auto px-4">
         <div className="flex gap-2">
           {FILTERS.map((f) => {
