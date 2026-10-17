@@ -10,6 +10,23 @@ export const metadata: Metadata = {
   title: "Kasir",
 };
 
+/*
+ * Select kolom eksplisit, bukan `*`.
+ *
+ * Yang sengaja TIDAK diambil karena tidak pernah dibaca di sisi kasir:
+ *   orders      -> subtotal, updated_at
+ *   order_items -> created_at, menu_item_id, order_id, unit_cost, unit_price
+ *
+ * unit_cost tidak ikut karena harga modal tidak perlu sampai ke browser kasir.
+ *
+ * PENTING: string select di bawah ini SENGAJA ditulis langsung, bukan
+ * disimpan ke variabel. Supabase-js di setup ini TIDAK memvalidasi isi string
+ * select terhadap skema (sudah diuji: kolom palsu tidak bikin `tsc` gagal),
+ * jadi penjaga yang benar ada di `types/order.ts` -- tipe `KasirOrder` hanya
+ * menyatakan kolom yang benar-benar diambil. Pembaca kolom lain akan tertangkap
+ * `tsc`.
+ */
+
 export default async function KasirPage() {
   const supabase = await createClient();
 
@@ -31,12 +48,16 @@ export default async function KasirPage() {
   const [active, recentlyFinished] = await Promise.all([
     supabase
       .from("orders")
-      .select("*, order_items(*)")
+      .select(
+        "id, order_number, customer_name, order_type, table_number, payment_method, payment_status, status, notes, total, created_at, order_items(id, quantity, menu_name, subtotal, selected_customizations)"
+      )
       .in("status", ["pending", "confirmed", "preparing", "ready"])
       .order("created_at", { ascending: true }),
     supabase
       .from("orders")
-      .select("*, order_items(*)")
+      .select(
+        "id, order_number, customer_name, order_type, table_number, payment_method, payment_status, status, notes, total, created_at, order_items(id, quantity, menu_name, subtotal, selected_customizations)"
+      )
       .in("status", ["completed", "cancelled"])
       .gte("created_at", recentFinishedFrom)
       .order("created_at", { ascending: false }),

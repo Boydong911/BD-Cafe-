@@ -32,10 +32,26 @@ const FILTERS: {
  * Kasir menunggu pelanggan di depan meja, bukan sedang menghadap layar,
  * jadi pesanan baru harus terlihat dalam hitungan detik -- bukan lima
  * detik, karena itu terasa lama.
+ *
+ * Dipakai HANYA kalau Realtime sedang tidak terhubung. Kalau Realtime
+ * hidup, pesanan baru sudah sampai lewat `router.refresh()` di channel,
+ * jadi polling cepat hanya mengulang pekerjaan yang sama.
  */
 const POLL_MS = 3000;
 
-/** Berapa lama pesanan baru ditandai(disorot) setelah muncul. */
+/**
+ * Jeda polling saat Realtime terhubung.
+ *
+ * Fungsinya tetap jaring pengaman, jadi harus tetap ada -- hanya tidak
+ * perlu sedekat itu. 30 detik cukup untuk kasus "Realtime diam-diam
+ * putus tanpa memberi status", tanpa menarik ulang seluruh daftar
+ * 20 kali per menit.
+ *
+ * Menghemat sekitar 90% permintaan refresh di kondisi normal.
+ */
+const POLL_MS_REALTIME_OK = 30000;
+
+/** Berapa lama pesanan baru ditandai setelah muncul. */
 const NEW_HIGHLIGHT_MS = 20000;
 
 export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
@@ -49,6 +65,9 @@ export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
   // mana yang baru tanpa harus membandingkan daftar sendiri.
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
   const knownIds = useRef<Set<string> | null>(null);
+  // Status langganan Realtime untuk interval polling. Ref, bukan state,
+  // supaya tidak memicu render ulang.
+  const realtimeLive = useRef(false);
 
   /*
    * Dua lapis pembaruan, karena kasir TIDAK BOLEH menunggu refresh manual:
@@ -90,16 +109,31 @@ export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
       )
       .subscribe((status) => {
         setRealtimeStatus(status);
+        realtimeLive.current = status === "SUBSCRIBED";
       });
 
+    /*
+     * Polling selalu jalan, tapi jeda-nya menyesuaikan kondisi:
+     *   Realtime hidup  -> 30 detik (cukup sebagai jaring pengaman)
+     *   Realtime mati   -> 3 detik (ini satu-satunya cara pesanan sampai)
+     *
+     * `realtimeLive` dibaca di dalam callback, bukan di dalam effect, supaya
+     * interval tidak perlu dibuat ulang tiap kali status berubah.
+     */
     const poller = setInterval(() => {
       if (document.hidden) return; // hemat request saat tab di belakang
       router.refresh();
     }, POLL_MS);
 
+    const slowPoller = setInterval(() => {
+      if (document.hidden || !realtimeLive.current) return;
+      router.refresh();
+    }, POLL_MS_REALTIME_OK);
+
     return () => {
       clearTimeout(debounce);
       clearInterval(poller);
+      clearInterval(slowPoller);
       supabase.removeChannel(channel);
     };
   }, [router]);
