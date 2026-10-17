@@ -27,19 +27,22 @@ const STATUS_CLASS: Record<OrderStatus, string> = {
 /*
  * Alur tombol setelah penyederhanaan (permintaan owner):
  *
- *   pending  + belum bayar  ->  [Konfirmasi Bayar]  ->  ready
- *   pending  + sudah bayar  ->  [Siap Disajikan]    ->  ready
- *   ready                   ->  [Selesaikan]       ->  completed
+ *   pending / confirmed / preparing  ->  [Konfirmasi Bayar]  ->  ready  (+ struk)
+ *   ready                            ->  [Selesaikan]       ->  completed
  *
- * Jadi tidak ada lagi tombol "Terima Pesanan" maupun "Mulai Dibuat".
- * Setelah konfirmasi bayar, pesanan otomatis melompat ke "Siap Disajikan".
+ * Tombol "Terima Pesanan" dan "Mulai Dibuat" sudah dihapus, jadi tidak ada
+ * lagi tabel transisi NEXT_STEP. Jumlah tombolnya tinggal bergantung pada status:
+ *   - belum ready   -> "Konfirmasi Bayar" (tunai / QRIS), lalu struk
+ *   - sudah ready   -> "Selesaikan"
+ *
+ * PENTING soal tombol "Konfirmasi Bayar":
+ *   Tombol ini sengaja TIDAK disembunyikan hanya karena sudah lunas. Untuk
+ *   QRIS, customer menekan "Sudah Bayar" di halamannya sendiri, jadi pesanan
+ *   sudah `paid` SEBELUM kasir menyentuhnya. Kalau tombolnya disembunyikan
+ *   saat sudah lunas, kasir tidak punya cara lagi untuk mencetak struk.
+ *   Yang menentukan adalah statusnya sudah `ready` atau `completed` — bukan
+ *   status pembayarannya.
  */
-const NEXT_STEP: Partial<Record<OrderStatus, { to: OrderStatus; label: string }>> = {
-  pending: { to: "ready", label: "Siap Disajikan" },
-  confirmed: { to: "ready", label: "Siap Disajikan" },
-  preparing: { to: "ready", label: "Siap Disajikan" },
-  ready: { to: "completed", label: "Selesaikan" },
-};
 
 const CAN_CANCEL: OrderStatus[] = ["pending", "confirmed", "preparing"];
 
@@ -85,8 +88,20 @@ export function OrderCard({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const next = NEXT_STEP[order.status];
   const isPaid = order.payment_status === "paid";
+  const isCancelled = order.status === "cancelled";
+  const isDone = order.status === "completed";
+
+  // Sudah masuk status ready: tombol konfirmasi bayar tidak relevan lagi.
+  const isReadyToServe = order.status === "ready";
+
+  /*
+   * Tombol konfirmasi bayar tetap muncul walau sudah lunas, karena untuk
+   * QRIS pesanan sudah `paid` sebelum kasir menyentuhinya dan kasir tetap
+   * perlu tombol ini untuk mencetak struk.
+   */
+  const canConfirmPayment =
+    !isCancelled && !isDone && !isReadyToServe;
 
   function run(action: () => Promise<{ success: boolean; error?: string }>) {
     setError(null);
@@ -213,13 +228,15 @@ export function OrderCard({
 
         <div className="flex flex-wrap gap-2">
           {/*
-            Belum lunas -> satu tombol "Konfirmasi Bayar". Setelah ditekan,
-            pesanan otomatis jadi "Siap Disajikan" dan struk tercetak.
+            Tombol "Konfirmasi Bayar" muncul selama pesanan belum masuk status
+            `ready` — bukan selama belum lunas.
 
-            Label menyebut "QRIS" kalau metode pembayarannya QRIS, supaya
-            kasir tahu sedang mengonfirmasi pembayaran yang mana.
+            Untuk QRIS, customer sudah menekan "Sudah Bayar" di halamannya,
+            jadi pesanan tiba di kasir dalam keadaan `paid`. Kalau tombol ini
+            disembunyikan saat sudah lunas, kasir kehilangan satu-satunya cara
+            untuk mencetak struk.
           */}
-          {!isPaid && order.status !== "cancelled" && (
+          {canConfirmPayment && (
             <Button
               type="button"
               variant="default"
@@ -236,16 +253,16 @@ export function OrderCard({
             </Button>
           )}
 
-          {/* Sudah lunas: sisanya tinggal tombol status. */}
-          {isPaid && next && (
+          {/* Sudah siap Disajikan: tombol terakhir. */}
+          {isReadyToServe && (
             <Button
               type="button"
               size="sm"
               className="flex-1"
               disabled={isPending}
-              onClick={() => run(() => updateOrderStatus(order.id, next.to))}
+              onClick={() => run(() => updateOrderStatus(order.id, "completed"))}
             >
-              {isPending ? "Memproses..." : next.label}
+              {isPending ? "Memproses..." : "Selesaikan"}
             </Button>
           )}
 
