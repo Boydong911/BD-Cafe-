@@ -7,12 +7,26 @@ import type { OrderStatus, PaymentStatus } from "@/types/order";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
-// Transisi status yang diizinkan (divalidasi di server, bukan cuma di UI)
+/*
+ * Transisi status yang diizinkan (divalidasi di server, bukan cuma di UI).
+ *
+ * Alur disederhanakan sesuai permintaan owner:
+ *   - "Terima Pesanan" (pending -> confirmed) DIHAPUS
+ *   - "Mulai Dibuat"   (confirmed -> preparing) DIHAPUS
+ *   - Setelah dibayar, pesanan LANGSUNG jadi "ready"
+ *
+ * Status confirmed dan preparing tidak dihapus dari enum karena pesanan lama
+ * masih ada di database dengan status itu, dan halaman customer masih
+ * menampilkan labelnya. Tapi kasir tidak perlu lagi lewat keduanya.
+ */
 const ALLOWED: Record<OrderStatus, OrderStatus[]> = {
-  pending: ["confirmed", "cancelled"],
-  confirmed: ["preparing", "cancelled"],
+  // pending: bisa langsung ke ready kalau sudah bayar, atau batal
+  pending: ["ready", "cancelled"],
+  // Status lama:boleh lompat supaya kasir tidak terkunci kalau ada pesanan
+  // yang sudah menempel di statuses ini dari sebelum alur disederhanakan.
+  confirmed: ["preparing", "ready", "cancelled"],
   preparing: ["ready", "cancelled"],
-  ready: ["completed"],
+  ready: ["completed", "cancelled"],
   completed: [],
   cancelled: [],
 };
@@ -103,7 +117,7 @@ export async function confirmPayment(orderId: string): Promise<ActionResult> {
   });
 
   if (error) {
-    // Pesan asli dicatat di log server supaya bisa dibaca developer.
+    // Pesan asli dicetak ke log server supaya bisa dibaca developer.
     // Untuk kasir tetap dipakai kalimat yang bisa dipahami.
     console.error(
       "[kasir] confirm_cash_payment gagal:",
@@ -121,6 +135,32 @@ export async function confirmPayment(orderId: string): Promise<ActionResult> {
       success: false,
       error: "Pesanan sudah dibayar atau sudah dibatalkan.",
     };
+  }
+
+  /*
+   * Payment sudah lunas. Sekarang pesanan LANGSUNG ditandai jadi "ready"
+   * (Siap Disajikan) supaya kasir tidak perlu klik "Mulai Dibuat" dulu.
+   *
+   * Dicoba idempoten: kalau pesanan sudah "ready" atau "completed", tidak
+   * ada yang perlu diubah dan ini bukan error.
+   */
+  const { data: current } = await supabase
+    .from("orders")
+    .select("status")
+    .eq("id", orderId)
+    .single();
+
+  const status = (current as unknown as { status?: OrderStatus } | null)?.status;
+
+  if (status && status !== "ready" && status !== "completed" && status !== "cancelled") {
+    const { error: statusError } = await supabase
+      .from("orders")
+      .update({ status: "ready" })
+      .eq("id", orderId);
+
+    if (statusError) {
+      console.error("[kasir] update status ready gagal:", statusError.message);
+    }
   }
 
   revalidatePath("/admin/kasir");

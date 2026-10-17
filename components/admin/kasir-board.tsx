@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { OrderCard } from "@/components/admin/order-card";
+import { ReceiptPrint } from "@/components/admin/receipt-print";
 import type { KasirOrder, OrderStatus } from "@/types/order";
 
 const ACTIVE: OrderStatus[] = ["pending", "confirmed", "preparing", "ready"];
@@ -28,6 +29,8 @@ const FILTERS: {
 export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
   const router = useRouter();
   const [filterKey, setFilterKey] = useState("aktif");
+  // Pesanan yang struknya sedang dicetak.
+  const [printing, setPrinting] = useState<KasirOrder | null>(null);
 
   // Realtime: setiap ada perubahan di orders/order_items, refetch data server
   useEffect(() => {
@@ -116,10 +119,21 @@ export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {visible.map((order) => (
-            <OrderCard key={order.id} order={order} />
+            <OrderCard
+              key={order.id}
+              order={order}
+              onConfirmPayment={setPrinting}
+            />
           ))}
         </div>
       )}
+
+      {/*
+        Struk otomatis tercetak begitu kasir menekan "Konfirmasi Bayar".
+        Elemennya tersembunyi di layar dan baru terlihat saat window.print()
+        dipanggil (lihat aturan @media print di app/globals.css).
+      */}
+      <ReceiptPrint order={printing} onPrinted={() => setPrinting(null)} />
     </div>
   );
 }

@@ -95,3 +95,42 @@
     @apply font-serif;
   }
 }
+
+/*
+  STRUK / CETAK
+  Structurally: elemen `.print-area` disembunyikan di layar, dan saat pencetakan
+  seluruh halaman lain disembunyikan lalu struk saja yang tampil.
+
+  Lebar 76mm mengikuti kertas struk thermal yang umum dipakai printer kasir.
+  Kalau nanti memakai printer A4, ubah nilai --struk-width di bawah.
+*/
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 76mm;
+    margin: 0 auto;
+    padding: 4mm;
+    background: #fff;
+    color: #000;
+  }
+
+  @page {
+    size: auto;
+    margin: 4mm;
+  }
+}
+
+.print-area {
+  display: none;
+}
