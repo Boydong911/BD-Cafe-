@@ -1,4 +1,5 @@
 // File: app/admin/owner/kategori/page.tsx
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import {
   CategoryManager,
@@ -9,6 +10,10 @@ import {
   fetchCategoryTree,
   fetchMenuCountByCategory,
 } from "@/lib/categories";
+
+export const metadata: Metadata = {
+  title: "Kelola Kategori",
+};
 
 export default async function OwnerCategoriesPage() {
   const supabase = await createClient();

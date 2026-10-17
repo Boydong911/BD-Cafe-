@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MenuForm, type MenuFormCategory } from "@/components/admin/menu-form";
 import { fetchCategoryTree } from "@/lib/categories";
 import type { MenuItemRow } from "@/types/menu";
+
+export const metadata: Metadata = {
+  title: "Edit Menu",
+};
 
 export default async function EditMenuPage({
   params,

@@ -1,10 +1,15 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { MenuTable } from "@/components/admin/menu-table";
 import { fetchCategoryTree } from "@/lib/categories";
 import type { MenuItemRow } from "@/types/menu";
+
+export const metadata: Metadata = {
+  title: "Kelola Menu",
+};
 
 export default async function OwnerMenuPage() {
   const supabase = await createClient();

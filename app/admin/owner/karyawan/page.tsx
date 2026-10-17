@@ -1,9 +1,14 @@
 // File: app/admin/owner/karyawan/page.tsx
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StaffManager, type StaffRow } from "@/components/admin/staff-manager";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Karyawan",
+};
 
 export default async function StaffPage() {
   const supabase = await createClient();

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -7,6 +8,17 @@ import { OrderStatusRealtime } from "./order-status-realtime";
 import { menuHref } from "@/lib/menu-href";
 
 export const revalidate = 0;
+
+/*
+ * Judul sengaja statis, tidak memakai generateMetadata.
+ * Halaman ini sudah mengambil data pesanan lewat RPC; menambah
+ * generateMetadata berarti satu request kedua ke database hanya untuk
+ * judul tab. "Nomor Antrian" sudah cukup jelas untuk mengidentifikasi
+ * halaman ini.
+ */
+export const metadata: Metadata = {
+  title: "Nomor Antrian",
+};
 
 type OrderRow = {
   id: string;

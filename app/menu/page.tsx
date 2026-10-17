@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { MenuCatalog } from "@/components/customer/menu-catalog";
 import { TableSessionSync } from "@/components/customer/table-session-sync";
@@ -8,6 +9,10 @@ import { fetchCategoryTree } from "@/lib/categories";
 import Image from "next/image";
 
 export const revalidate = 0; // selalu ambil data stok terbaru
+
+export const metadata: Metadata = {
+  title: "Menu",
+};
 
 type MenuRow = {
   id: string;

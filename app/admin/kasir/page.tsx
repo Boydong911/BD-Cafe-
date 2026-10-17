@@ -1,9 +1,14 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { KasirBoard } from "@/components/admin/kasir-board";
 import { addDays } from "@/lib/format";
 import type { KasirOrder } from "@/types/order";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Kasir",
+};
 
 export default async function KasirPage() {
   const supabase = await createClient();

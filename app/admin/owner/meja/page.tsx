@@ -1,6 +1,11 @@
 // File: app/admin/owner/meja/page.tsx
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { TableManager } from "@/components/admin/table-manager";
+
+export const metadata: Metadata = {
+  title: "Kelola Meja",
+};
 
 export default async function MejaPage() {
   const supabase = await createClient();

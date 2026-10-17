@@ -1,4 +1,5 @@
-import { Suspense } from "react";
+import { Suspense, cache } from "react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MenuDetail } from "@/components/customer/menu-detail";
@@ -19,6 +20,46 @@ type DetailRow = {
   categories: { name: string } | null;
 };
 
+/*
+ * Bungkus query dengan cache() supaya generateMetadata dan halaman tidak
+ * menembak database dua kali untuk id yang sama.
+ *
+ * cache() hanya bertahan selama satu permintaan render, jadi halaman
+ * berikutnya tetap membaca data terbaru dari database -- tidak ada menu
+ * basi karena cache.
+ */
+const fetchItem = cache(async (id: string) => {
+  const supabase = await createClient();
+
+  return supabase
+    .from("menu_items")
+    .select(
+      "id, name, description, price, image_url, is_available, customization_options, categories(name)"
+    )
+    .eq("id", id)
+    .maybeSingle();
+});
+
+/*
+ * Berbeda dari halaman lain, judul di sini memakai nama menunya:
+ * "Kopi Susu Gula Aren-BD Cafe". Ini yang muncul di tab browser saat
+ * pelanggan menyimpan halaman atau mengirimkannya ke grup.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const { data } = await fetchItem(id);
+  const row = data as unknown as DetailRow | null;
+
+  return {
+    title: row?.name ?? "Menu",
+    description: row?.description ?? undefined,
+  };
+}
+
 export default async function MenuDetailPage({
   params,
   searchParams,
@@ -27,15 +68,8 @@ export default async function MenuDetailPage({
   searchParams: Promise<{ table?: string }>;
 }) {
   const [{ id }, { table }] = await Promise.all([params, searchParams]);
-  const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("menu_items")
-    .select(
-      "id, name, description, price, image_url, is_available, customization_options, categories(name)"
-    )
-    .eq("id", id)
-    .maybeSingle();
+  const { data } = await fetchItem(id);
 
   if (!data) notFound();
 

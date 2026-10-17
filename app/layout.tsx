@@ -16,7 +16,18 @@ const fontBody = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "BD Coffee",
+  /*
+   * `template` dipakai supaya tiap halaman cukup menulis judul singkatnya
+   * saja (`export const metadata = { title: "Kasir" }`) dan hasilnya
+   * otomatis menjadi "Kasir-BD Cafe".
+   *
+   * Tanpa template ini, tiap halaman harus menulis ulang nama cafe
+   * sendiri -- dan tadi semua tab browser cuma menampilkan "BD Coffee".
+   */
+  title: {
+    default: "BD Cafe",
+    template: "%s-BD Cafe",
+  },
   description: "Cafe premium — kopi, kenyamanan, cita rasa.",
 };
 

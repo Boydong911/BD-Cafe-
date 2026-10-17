@@ -1,9 +1,19 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PaymentPanel } from "./payment-panel";
 import { getPaymentState } from "../actions";
 
 export const revalidate = 0;
+
+/*
+ * Judul statis, bukan generateMetadata. Halaman ini sudah memanggil
+ * get_order_by_id() dan getPaymentState(); menambah generateMetadata
+ * berarti satu panggilan database lagi tanpa manfaat yang sebanding.
+ */
+export const metadata: Metadata = {
+  title: "Pembayaran",
+};
 
 type PayRow = {
   id: string;

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import {
   Wallet,
   PiggyBank,
@@ -29,6 +30,10 @@ import {
 } from "@/lib/sales";
 import { fetchUnseenRegistrations } from "@/lib/registrations";
 import { fetchOrderList, splitByCompletion, totalsOf } from "@/lib/order-list";
+
+export const metadata: Metadata = {
+  title: "Dashboard Owner",
+};
 
 // Ringkasan ikut berubah saat kasir memperbarui status pesanan.
 export const dynamic = "force-dynamic";

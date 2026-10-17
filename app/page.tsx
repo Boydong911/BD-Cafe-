@@ -1,8 +1,23 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { HeroSection } from "@/components/customer/hero-section";
 import { TableSessionSync } from "@/components/customer/table-session-sync";
 import { createClient } from "@/lib/supabase/server";
 import type { ShowcaseMenuItem } from "@/components/customer/menu-showcase-slider";
+
+/*
+ * Catatan: judul di sini sengaja TANPA akhiran "-BD Cafe".
+ *
+ * Title template dari app/layout.tsx tidak berlaku untuk page.tsx di
+ * segmen yang sama -- Next.js hanya menerapkannya ke segmen anak.
+ *
+ * Di halaman depan, menampilkan nama cafe saja lebih rapi: ini yang
+ * pertama dilihat orang, jadi yang tampil sebaiknya brand, bukan
+ * label halaman.
+ */
+export const metadata: Metadata = {
+  title: "BD Cafe",
+};
 
 const FOOD_CATEGORY = "Makanan Ringan";
 

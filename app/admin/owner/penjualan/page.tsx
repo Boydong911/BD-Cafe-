@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Wallet, Receipt, PiggyBank, ShoppingBag, Clock, CheckCircle2 } from "lucide-react";
 import { SalesChart } from "@/components/admin/sales-chart";
 import { SalesFilter } from "@/components/admin/sales-filter";
@@ -19,6 +20,10 @@ import {
   summarize,
 } from "@/lib/sales";
 import { fetchOrderList, splitByCompletion, totalsOf } from "@/lib/order-list";
+
+export const metadata: Metadata = {
+  title: "Penjualan",
+};
 
 // Laporan ikut berubah saat kasir memperbarui status pesanan.
 export const dynamic = "force-dynamic";

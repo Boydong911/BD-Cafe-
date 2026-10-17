@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
 import { MenuForm } from "@/components/admin/menu-form";
 import { fetchCategoryTree } from "@/lib/categories";
 import type { MenuFormCategory } from "@/components/admin/menu-form";
+
+export const metadata: Metadata = {
+  title: "Tambah Menu",
+};
 
 export default async function NewMenuPage() {
   const groups = await fetchCategoryTree();
