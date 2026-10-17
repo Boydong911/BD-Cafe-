@@ -91,15 +91,40 @@ export async function confirmPayment(orderId: string): Promise<ActionResult> {
   const { supabase, ok } = await assertStaff();
   if (!ok) return { success: false, error: "Akses ditolak." };
 
-  const { error } = await supabase
-    .from("orders")
-    .update({ payment_status: "paid" })
-    .eq("id", orderId)
-    .eq("payment_status", "pending")
-    .neq("status", "cancelled");
+  /*
+   * Memakai RPC `confirm_cash_payment`, bukan `.update()` langsung.
+   *
+   * Alasannya: update langsung harus lolos policy RLS, sementara jalur QRIS
+   * (confirm_qris_payment) jalan lewat function SECURITY DEFINER yang bypass
+   * RLS. lalu yang tidak konsisten antar dua jalur pembayaran.
+   */
+  const { data, error } = await supabase.rpc("confirm_cash_payment", {
+    p_order_id: orderId,
+  });
 
-  if (error) return { success: false, error: "Gagal konfirmasi pembayaran." };
+  if (error) {
+    // Pesan asli dicatat di log server supaya bisa dibaca developer.
+    // Untuk kasir tetap dipakai kalimat yang bisa dipahami.
+    console.error(
+      "[kasir] confirm_cash_payment gagal:",
+      error.code,
+      error.message,
+      error.details,
+      error.hint
+    );
+    return { success: false, error: "Gagal konfirmasi pembayaran." };
+  }
+
+  // `false` = tidak ada baris yang berubah (sudah dibayar / sudah dibatalkan).
+  if (data !== true) {
+    return {
+      success: false,
+      error: "Pesanan sudah dibayar atau sudah dibatalkan.",
+    };
+  }
 
   revalidatePath("/admin/kasir");
+  revalidatePath("/admin/owner");
+  revalidatePath("/admin/owner/penjualan");
   return { success: true };
 }

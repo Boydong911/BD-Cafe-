@@ -290,6 +290,7 @@ export type Database = {
     Functions: {
       cancel_unpaid_order: { Args: { p_order_id: string }; Returns: boolean }
       confirm_qris_payment: { Args: { p_order_id: string }; Returns: boolean }
+      confirm_cash_payment: { Args: { p_order_id: string }; Returns: boolean }
       get_login_email: { Args: { p_username: string }; Returns: string }
       get_sales_report: {
         Args: { p_end: string; p_period: string; p_start: string }
