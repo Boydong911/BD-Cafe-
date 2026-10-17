@@ -5,7 +5,16 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { OrderCard } from "@/components/admin/order-card";
 import { ReceiptPrint } from "@/components/admin/receipt-print";
+import { MenuCatalog } from "@/components/customer/menu-catalog";
+import type { CategoryFilterGroup } from "@/components/category-filter";
+import type { MenuCardItem } from "@/components/customer/menu-card";
 import type { KasirOrder, OrderStatus } from "@/types/order";
+
+/** Tab utama kasir. Default-nya papan antrean, karena itu yang dipakai tiap hari. */
+const TABS = [
+  { key: "pesan", label: "Pesan Menu" },
+  { key: "alur", label: "Alur Pesanan" },
+] as const;
 
 const ACTIVE: OrderStatus[] = ["pending", "confirmed", "preparing", "ready"];
 
@@ -54,8 +63,18 @@ const POLL_MS_REALTIME_OK = 30000;
 /** Berapa lama pesanan baru ditandai setelah muncul. */
 const NEW_HIGHLIGHT_MS = 20000;
 
-export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
+export function KasirBoard({
+  orders,
+  menuItems,
+  categoryGroups,
+}: {
+  orders: KasirOrder[];
+  /** Katalog untuk tab "Pesan Menu". Diambil server, bukan fetch dari browser. */
+  menuItems: MenuCardItem[];
+  categoryGroups: CategoryFilterGroup[];
+}) {
   const router = useRouter();
+  const [tabKey, setTabKey] = useState<"pesan" | "alur">("alur");
   const [filterKey, setFilterKey] = useState("aktif");
   // Pesanan yang struknya sedang dicetak.
   const [printing, setPrinting] = useState<KasirOrder | null>(null);
@@ -195,6 +214,46 @@ export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
   return (
     <div className="space-y-5">
       {/*
+        Dua tab utama kasir.
+
+        "Pesan Menu" menampilkan katalog yang sama dengan /menu, supaya kasir
+        bisa melihat dan memilih menu tanpa pindah halaman. Katalog, kartu,
+        dan filter-nya semua dipakai ulang dari komponen customer -- tidak
+        ada salinan untuk versi kasir.
+
+        Data katalog dikirim dari server (lihat app/admin/kasir/page.tsx)
+        supaya tidak perlu fetch kedua kali dari browser.
+      */}
+      <div className="flex gap-2">
+        {TABS.map((tab) => {
+          const active = tab.key === tabKey;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setTabKey(tab.key)}
+              aria-pressed={active}
+              className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                active
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "bg-background hover:bg-muted"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {tabKey === "pesan" ? (
+        <MenuCatalog
+          items={menuItems}
+          groups={categoryGroups}
+          tableParam={null}
+        />
+      ) : (
+        <>
+      {/*
         Indikator koneksi realtime. Kalau titik ini merah, berarti push dari
         server tidak jalan dan halaman hanya andalkan polling. Berguna sebagai
         petunjuk kalau nanti ada complaint "pesanan telat muncul" -- kita tahu
@@ -266,11 +325,16 @@ export function KasirBoard({ orders }: { orders: KasirOrder[] }) {
           ))}
         </div>
       )}
+        </>
+      )}
 
       {/*
         Struk otomatis tercetak begitu kasir menekan "Konfirmasi Bayar".
         Elemennya tersembunyi di layar dan baru terlihat saat window.print()
         dipanggil (lihat aturan @media print di app/globals.css).
+
+        Sengaja DI LUAR percabangan tab: kalau struk sedang dicetak lalu kasir
+        pindah tab, struknya harus tetap tampil.
       */}
       <ReceiptPrint order={printing} onPrinted={() => setPrinting(null)} />
     </div>

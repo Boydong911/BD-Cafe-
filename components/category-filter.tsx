@@ -36,6 +36,7 @@ export function CategoryFilter({
   onChildChange,
   outOfStockCount,
   showOutOfStock = true,
+  className,
 }: {
   groups: CategoryFilterGroup[];
   activeGroup: string;
@@ -44,11 +45,13 @@ export function CategoryFilter({
   onChildChange: (value: string | null) => void;
   outOfStockCount?: number;
   showOutOfStock?: boolean;
+  /** Ditambahkan ke elemen terluar. Dipakai /menu untuk meratakan label. */
+  className?: string;
 }) {
   const activeGroupData = groups.find((g) => g.id === activeGroup);
 
   return (
-    <div className="space-y-2">
+    <div className={cn("space-y-2", className)}>
       <div className="flex gap-2 overflow-x-auto pb-1">
         <Button
           size="sm"

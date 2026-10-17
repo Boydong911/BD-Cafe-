@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { LandingNav } from "@/components/customer/landing-nav";
 import {
   MenuShowcaseSlider,
   type ShowcaseMenuItem,
@@ -9,16 +10,18 @@ import {
 export function HeroSection({ menuItems }: { menuItems: ShowcaseMenuItem[] }) {
   return (
     <section className="relative flex min-h-dvh flex-col overflow-hidden bg-primary lg:h-screen lg:flex-row">
+      {/* Navbar melayang di atas hero */}
+      <LandingNav />
+
       {/* Background foto */}
       <div className="absolute inset-0 bg-[url('/hero-bg.jpg')] bg-cover bg-center" />
-      {/* Overlay gelap — dipekatin biar teks putih tetap kebaca di background terang manapun */}
       {/* Overlay gelap — dipekatin biar teks putih tetap kebaca di background terang manapun */}
       <div className="absolute inset-0 bg-black/55" />
       <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent" />
       <div className="pointer-events-none absolute inset-0 opacity-[0.05] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:24px_24px]" />
 
       {/* KIRI — Logo, judul, deskripsi, info */}
-      <div className="relative z-10 flex flex-1 flex-col justify-center px-6 py-16 sm:px-10 lg:px-16">
+      <div className="relative z-10 flex flex-1 flex-col justify-center px-6 pb-16 pt-24 sm:px-10 lg:px-16 lg:pt-16">
         <Image
           src="/logo-hero-white.png"
           alt="BD Coffee"
@@ -64,7 +67,7 @@ export function HeroSection({ menuItems }: { menuItems: ShowcaseMenuItem[] }) {
       </div>
 
       {/* KANAN — Kartu foto menu (3:4) */}
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-6 py-12 lg:px-16">
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-6 pb-12 pt-24 sm:px-6 lg:px-16 lg:pt-16">
         <MenuShowcaseSlider items={menuItems} />
 
         <Button
@@ -72,7 +75,7 @@ export function HeroSection({ menuItems }: { menuItems: ShowcaseMenuItem[] }) {
           size="lg"
           className="border-2 border-white bg-transparent text-white transition-colors duration-200 hover:bg-white hover:text-black"
         >
-          <Link href="/menu">Lihat menunya disini yee! →</Link>
+          <Link href="/menu">Lihat Menunya Disini Yaa</Link>
         </Button>
       </div>
     </section>

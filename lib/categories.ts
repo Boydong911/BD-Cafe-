@@ -1,6 +1,58 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import type { MenuCardItem } from "@/components/customer/menu-card";
+
+/**
+ * Ambil menu + kategori untuk ditampilkan sebagai katalog.
+ *
+ * Dipakai oleh halaman /menu dan oleh tab "Pesan Menu" di halaman kasir,
+ * supaya keduanya tidak punya query dan pemetaan field yang terpisah.
+ * Satu sumber data, dua pemakai.
+ */
+export async function fetchMenuCatalog(): Promise<{
+  items: MenuCardItem[];
+  groups: Awaited<ReturnType<typeof fetchCategoryTree>>;
+}> {
+  const supabase = await createClient();
+
+  const [{ data, error }, groups] = await Promise.all([
+    supabase
+      .from("menu_items")
+      .select("id, name, price, image_url, is_available, categories(id, name)")
+      .order("name", { ascending: true }),
+    fetchCategoryTree(),
+  ]);
+
+  if (error) {
+    console.error("[menu] gagal memuat:", error.message);
+    return { items: [], groups };
+  }
+
+  type Row = {
+    id: string;
+    name: string;
+    price: number;
+    image_url: string | null;
+    is_available: boolean;
+    categories: { id: string; name: string } | null;
+  };
+
+  const rows = (data ?? []) as unknown as Row[];
+
+  return {
+    groups,
+    items: rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      price: Number(row.price),
+      image_url: row.image_url,
+      is_available: row.is_available,
+      category_id: row.categories?.id ?? null,
+      category_name: row.categories?.name ?? null,
+    })),
+  };
+}
 
 /**
  * Kategori dua tingkat: induk (Minuman / Makanan) + sub-kategori.
@@ -145,9 +197,4 @@ export function attachCounts(
     );
     return { ...group, menuCount: total };
   });
-}
-
-/** Total menu di seluruh grup. */
-export function totalMenuCount(groups: CategoryGroup[]): number {
-  return groups.reduce((sum, group) => sum + group.menuCount, 0);
 }

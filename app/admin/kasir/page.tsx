@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { KasirBoard } from "@/components/admin/kasir-board";
 import { addDays } from "@/lib/format";
+import { fetchMenuCatalog } from "@/lib/categories";
 import type { KasirOrder } from "@/types/order";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,10 @@ export default async function KasirPage() {
   const supabase = await createClient();
 
   const now = new Date();
+
+  // Katalog untuk tab "Pesan Menu". Menu jarang berubah dalam satu shift,
+  // jadi query tambahan ini murah dibanding menulis ulang query di tab itu.
+  const { items: menuItems, groups: categoryGroups } = await fetchMenuCatalog();
 
   // Garis waktu untuk order SELESAI/BATAL: 24 jam ke belakang, bukan cuma
   // hari kalender. Jadi order yang dibuat kemarin sore lalu diselesaikan
@@ -95,5 +100,11 @@ export default async function KasirPage() {
     );
   }
 
-  return <KasirBoard orders={orders} />;
+  return (
+    <KasirBoard
+      orders={orders}
+      menuItems={menuItems}
+      categoryGroups={categoryGroups}
+    />
+  );
 }

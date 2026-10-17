@@ -1,8 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Search, PackageSearch } from "lucide-react";
 import {
   ALL,
   CategoryFilter,
@@ -14,12 +12,14 @@ export function MenuCatalog({
   items,
   groups,
   tableParam,
+  /** Label kategori dibuat lebih besar dan rata tengah. Dipakai di /menu. */
+  centerFilter = false,
 }: {
   items: MenuCardItem[];
   groups: CategoryFilterGroup[];
   tableParam: string | null;
+  centerFilter?: boolean;
 }) {
-  const [search, setSearch] = useState("");
   const [activeGroup, setActiveGroup] = useState<string>(ALL);
   const [activeChild, setActiveChild] = useState<string | null>(null);
 
@@ -32,26 +32,18 @@ export function MenuCatalog({
     return map;
   }, [groups]);
 
-  const filteredItems = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-
-    return items.filter((item) => {
-      const matchesGroup =
-        activeGroup === ALL
-          ? true
-          : activeChild !== null
-            ? item.category_id === activeChild
-            : item.category_id !== null &&
-              groupByCategoryId.get(item.category_id) === activeGroup;
-
-      const matchesSearch =
-        keyword.length === 0 ||
-        item.name.toLowerCase().includes(keyword) ||
-        (item.description?.toLowerCase().includes(keyword) ?? false);
-
-      return matchesGroup && matchesSearch;
-    });
-  }, [items, search, activeGroup, activeChild, groupByCategoryId]);
+  const filteredItems = useMemo(
+    () =>
+      items.filter((item) => {
+        if (activeGroup === ALL) return true;
+        if (activeChild !== null) return item.category_id === activeChild;
+        return (
+          item.category_id !== null &&
+          groupByCategoryId.get(item.category_id) === activeGroup
+        );
+      }),
+    [items, activeGroup, activeChild, groupByCategoryId]
+  );
 
   const activeLabel =
     activeChild !== null
@@ -62,18 +54,6 @@ export function MenuCatalog({
 
   return (
     <div className="space-y-5">
-      {/* Search bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cari menu, mis. 'Es Kopi Susu'..."
-          className="pl-9"
-        />
-      </div>
-
-      {/* Filter kategori: Minuman / Makanan -> sub-kategori */}
       <CategoryFilter
         groups={groups}
         activeGroup={activeGroup}
@@ -81,17 +61,13 @@ export function MenuCatalog({
         onGroupChange={setActiveGroup}
         onChildChange={setActiveChild}
         showOutOfStock={false}
+        className={centerFilter ? "justify-items-center [&>div]:justify-center" : undefined}
       />
 
-      {/* Grid menu */}
       {filteredItems.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-16 text-center text-muted-foreground">
-          <PackageSearch className="h-8 w-8" />
-          <p className="text-sm">
-            Menu tidak ditemukan
-            {activeLabel ? ` di kategori "${activeLabel}"` : ""}
-            {search ? ` untuk "${search}"` : ""}.
-          </p>
+        <div className="py-16 text-center text-sm text-muted-foreground">
+          Menu tidak ditemukan
+          {activeLabel ? ` di kategori "${activeLabel}"` : ""}.
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
