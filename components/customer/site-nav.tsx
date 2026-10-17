@@ -25,38 +25,32 @@ const NAV_ITEMS = [
 /**
  * Navbar BD Cafe.
  *
- * `overlay` dipakai di halaman depan: menumpuk di atas foto hero yang gelap,
- * jadi teksnya putih dan posisinya absolute. Tanpa `overlay` (dipakai di
- * /menu) navbar jadi bar biasa di atas konten, dengan teks gelap dan garis
- * bawah.
+ * Latar selalu hitam 30% (`bg-black/30`) dan logo selalu putih, jadi navbar
+ * di halaman depan yang gelap dan di /menu yang terang tetap terbaca tanpa
+ * filter apa pun pada logo.
+ *
+ * `overlay` hanya mengatur posisi: `true` menumpuk di atas foto hero
+ * (halaman depan), `false` jadi bar sticky di atas konten (/menu).
  */
 export function SiteNav({ overlay = false }: { overlay?: boolean }) {
   const [open, setOpen] = useState(false);
 
   const itemClass = (active: boolean) =>
     cn(
-      "text-sm font-medium transition-colors",
-      overlay
-        ? active
-          ? "text-accent"
-          : "text-white/85 hover:text-white"
-        : active
-          ? "text-primary"
-          : "text-foreground/70 hover:text-foreground",
-      "whitespace-nowrap"
+      "whitespace-nowrap text-sm font-medium text-white/85 transition-colors hover:text-white",
+      active && "text-accent"
     );
 
   return (
     <header
       className={cn(
-        "z-20",
-        overlay ? "absolute inset-x-0 top-0" : "sticky top-0 border-b bg-background/95 backdrop-blur"
+        "z-20 bg-black/30 backdrop-blur-sm",
+        overlay ? "absolute inset-x-0 top-0" : "sticky top-0"
       )}
     >
       <div
         className={cn(
-          "grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 lg:flex lg:justify-between lg:px-12",
-          overlay ? "py-4" : "py-3"
+          "grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 py-4 lg:flex lg:justify-between lg:px-12"
         )}
       >
         {/* Desktop: logo di kiri */}
@@ -66,7 +60,7 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
             alt="BD Cafe"
             width={200}
             height={80}
-            className={cn("w-auto object-contain", overlay ? "h-14" : "h-12 brightness-0 invert")}
+            className="h-14 w-auto object-contain"
             priority
           />
         </Link>
@@ -99,7 +93,7 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
               alt="BD Cafe"
               width={200}
               height={80}
-              className={cn("w-auto object-contain", overlay ? "h-11" : "h-10 brightness-0 invert")}
+              className="h-11 w-auto object-contain"
               priority
             />
           </Link>
@@ -108,10 +102,7 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? "Tutup menu" : "Buka menu"}
             aria-expanded={open}
-            className={cn(
-              "justify-self-end rounded-md p-2 transition-colors",
-              overlay ? "text-white hover:bg-white/10" : "hover:bg-muted"
-            )}
+            className="justify-self-end rounded-md p-2 text-white transition-colors hover:bg-white/10"
           >
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -119,12 +110,7 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
       </div>
 
       {open && (
-        <nav
-          className={cn(
-            "border-t px-5 py-3 lg:hidden",
-            overlay ? "border-white/10 bg-black/80 text-white backdrop-blur" : "bg-background"
-          )}
-        >
+        <nav className="border-t border-white/10 bg-black/60 px-5 py-3 text-white backdrop-blur lg:hidden">
           {NAV_ITEMS.map((item) =>
             item.href ? (
               <Link

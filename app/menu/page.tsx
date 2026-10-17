@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import Image from "next/image";
 import { MenuCatalog } from "@/components/customer/menu-catalog";
 import { SiteNav } from "@/components/customer/site-nav";
 import { TableSessionSync } from "@/components/customer/table-session-sync";
@@ -47,14 +46,6 @@ export default async function MenuPage({
       </Suspense>
 
       <div className="flex flex-col items-center gap-2 text-center">
-        <Image
-          src="/logo.png"
-          alt="BD Cafe"
-          width={64}
-          height={64}
-          priority
-          className="h-16 w-16 shrink-0 object-contain"
-        />
         <h1 className="font-serif text-3xl font-bold">BD Cafe Menu</h1>
         {table && (
           <p className="text-sm text-muted-foreground">
