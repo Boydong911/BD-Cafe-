@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { MenuCatalog } from "@/components/customer/menu-catalog";
+import { CartSheet } from "@/components/customer/cart-sheet";
 import { SiteNav } from "@/components/customer/site-nav";
 import { TableSessionSync } from "@/components/customer/table-session-sync";
 import { fetchMenuCatalog } from "@/lib/categories";
@@ -81,6 +82,13 @@ export default async function MenuPage({
         centerFilter
       />
       </div>
+
+      {/*
+        Tombol keranjang mengambang hanya saat ada meja. Di /menu polos
+        halaman ini katalog saja -- tidak ada yang bisa ditambahkan dari
+        sana, jadi keranjang hanya menambah ruang yang terisi.
+      */}
+      {table && <CartSheet />}
     </div>
   );
 }

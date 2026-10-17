@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MenuDetail } from "@/components/customer/menu-detail";
+import { CartSheet } from "@/components/customer/cart-sheet";
 import { TableSessionSync } from "@/components/customer/table-session-sync";
 import { normalizeCustomizationGroups } from "@/lib/menu-customizations";
 import { menuHref } from "@/lib/menu-href";
@@ -111,6 +112,9 @@ export default async function MenuDetailPage({
         groups={cleanGroups}
         backHref={backHref}
       />
+
+      {/* Detail menu selalu bisa dipesan, jadi keranjang selalu ada. */}
+      <CartSheet />
     </div>
   );
 }
