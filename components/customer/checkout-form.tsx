@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { QrCode, ShoppingBag, Loader2 } from "lucide-react";
 import { useCart } from "@/lib/cart/cart-context";
 import { createOrder, type CheckoutInput } from "@/app/checkout/actions";
+import { ConfirmOrderDialog } from "@/components/customer/confirm-order-dialog";
 
 type PaymentMethod = "qris" | "cash";
 
@@ -23,6 +24,8 @@ export function CheckoutForm() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // Modal konfirmasi sebelum pesanan benar-benar dikirim ke kasir.
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   if (items.length === 0) {
     return (
@@ -38,6 +41,11 @@ export function CheckoutForm() {
     );
   }
 
+  /**
+   * Tombol "Buat Pesanan" DITEKAN dulu -> validasi -> buka modal konfirmasi.
+   * Pesanan yang benar-benar terkirim baru setelah tombol "Ya, Buat Pesanan"
+   * di modal ditekan.
+   */
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -51,6 +59,11 @@ export function CheckoutForm() {
       return;
     }
 
+    setConfirmOpen(true);
+  }
+
+  /** Dijalankan dari tombol "Ya, Buat Pesanan" di modal. */
+  function handleConfirmed() {
     const snapshot = items;
     const payload: CheckoutInput = {
       customer_name: customerName.trim(),
@@ -76,6 +89,7 @@ export function CheckoutForm() {
       const result = await createOrder(payload);
       if (result?.error) {
         setError(result.error);
+        setConfirmOpen(false);
         snapshot.forEach((item) => addItem(item, item.quantity));
       }
     });
@@ -231,15 +245,40 @@ export function CheckoutForm() {
           )}
         </div>
 
-        <Button
-          type="submit"
-          disabled={isPending}
-          className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Buat Pesanan — Rp {totalPrice.toLocaleString("id-ID")}
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            type="submit"
+            disabled={isPending}
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:flex-1"
+          >
+            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Buat Pesanan — Rp {totalPrice.toLocaleString("id-ID")}
+          </Button>
+
+          <Button asChild variant="outline" className="w-full sm:flex-1">
+            <Link href="/menu">Batal</Link>
+          </Button>
+        </div>
       </form>
+
+      <ConfirmOrderDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        onConfirm={handleConfirmed}
+        items={items.map((item) => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          customizations: item.customizations.map((c) => c.label),
+        }))}
+        totalPrice={totalPrice}
+        customerName={customerName.trim() || "—"}
+        orderType={session.orderType}
+        tableNumber={session.tableNumber}
+        paymentMethod={paymentMethod}
+        notes={notes.trim()}
+        isPending={isPending}
+      />
     </div>
   );
 }

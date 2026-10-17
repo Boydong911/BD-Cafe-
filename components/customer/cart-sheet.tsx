@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ShoppingCart, Minus, Plus, Trash2 } from "lucide-react";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetHeader,
   SheetTitle,
@@ -211,6 +212,22 @@ export function CartSheet() {
           >
             <Link href="/checkout">Lanjut ke Checkout</Link>
           </Button>
+
+          {/*
+            Tutup keranjang tanpa pindah halaman. Tetap berguna karena setelah
+            memilih Dine In / Take Away atau mengisi nomor meja, kebanyakan orang masih
+            ingin balik lihat-lihat menu dulu sebelum checkout.
+          */}
+          <SheetClose asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full border-white/30 bg-transparent text-primary-foreground hover:bg-white/10 hover:text-primary-foreground"
+            >
+              Tutup
+            </Button>
+          </SheetClose>
         </SheetFooter>
       </SheetContent>
     </Sheet>
