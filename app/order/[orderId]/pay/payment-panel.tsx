@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, ArrowLeft, CheckCircle2, Clock, Loader2, Store } from "lucide-react";
 import { confirmQrisPayment, expireOrder } from "../actions";
 import { PAYMENT_WINDOW_MINUTES } from "@/lib/payment";
+import { menuHref } from "@/lib/menu-href";
 
 const rupiah = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
 
@@ -50,6 +51,10 @@ export function PaymentPanel(props: Props) {
   const expired = state === "expired";
   const isCash = method === "cash";
 
+  // Dihitung sekali di sini lalu dipakai ketiga sub-komponen, supaya tidak
+  // ada tempat yang lupa menempelkan nomor meja.
+  const backToMenu = menuHref(tableNumber);
+
   return (
     <div className="mx-auto max-w-md space-y-6 p-6">
       <div className="text-center">
@@ -60,9 +65,9 @@ export function PaymentPanel(props: Props) {
       </div>
 
       {expired ? (
-        <ExpiredBox />
+        <ExpiredBox backToMenu={backToMenu} />
       ) : isCash ? (
-        <CashBox orderId={orderId} />
+        <CashBox orderId={orderId} backToMenu={backToMenu} />
       ) : (
         <QrisBox
           orderId={orderId}
@@ -71,6 +76,7 @@ export function PaymentPanel(props: Props) {
           tableNumber={tableNumber}
           orderType={orderType}
           createdAt={createdAt}
+          backToMenu={backToMenu}
         />
       )}
     </div>
@@ -81,7 +87,13 @@ export function PaymentPanel(props: Props) {
 /* TUNAI DI KASIR                                                      */
 /* ------------------------------------------------------------------ */
 
-function CashBox({ orderId }: { orderId: string }) {
+function CashBox({
+  orderId,
+  backToMenu,
+}: {
+  orderId: string;
+  backToMenu: string;
+}) {
   const router = useRouter();
 
   // Tunggu kasir mengonfirmasi -> otomatis masuk ke halaman antrean
@@ -127,7 +139,7 @@ function CashBox({ orderId }: { orderId: string }) {
           status lewat link yang diberikan kasir.
         */}
         <Button asChild variant="ghost" className="w-full text-muted-foreground">
-          <Link href="/menu">
+          <Link href={backToMenu}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Kembali ke Menu
           </Link>
@@ -148,6 +160,7 @@ function QrisBox({
   tableNumber,
   orderType,
   createdAt,
+  backToMenu,
 }: {
   orderId: string;
   total: number;
@@ -155,6 +168,7 @@ function QrisBox({
   tableNumber: string | null;
   orderType: string;
   createdAt: string;
+  backToMenu: string;
 }) {
   const router = useRouter();
   const [remaining, setRemaining] = useState(() => secondsLeft(createdAt));
@@ -287,7 +301,7 @@ function QrisBox({
       */}
       <div className="space-y-2 border-t pt-4">
         <Button asChild variant="outline" className="w-full">
-          <Link href="/menu">
+          <Link href={backToMenu}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Kembali ke Menu
           </Link>
@@ -305,7 +319,7 @@ function QrisBox({
 /* KADU BATAS WAKTU                                                     */
 /* ------------------------------------------------------------------ */
 
-function ExpiredBox() {
+function ExpiredBox({ backToMenu }: { backToMenu: string }) {
   return (
     <div className="space-y-4 rounded-xl border-2 border-destructive/30 bg-destructive/5 p-6 text-center">
       <AlertCircle className="mx-auto h-10 w-10 text-destructive" />
@@ -314,7 +328,7 @@ function ExpiredBox() {
         Batas waktu 15 menit untuk pembayaran sudah lewat, jadi pesanan ini otomatis dibatalkan.
       </p>
       <Button asChild variant="outline" className="w-full">
-        <Link href="/menu">
+        <Link href={backToMenu}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Kembali ke Menu
         </Link>

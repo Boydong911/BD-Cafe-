@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrderStatusRealtime } from "./order-status-realtime";
+import { menuHref } from "@/lib/menu-href";
 
 export const revalidate = 0;
 
@@ -155,12 +156,16 @@ export default async function OrderPage({
         diletakkan paling bawah supaya tidak memenuhi layar di HP.
 
         Pergi ke /menu tidak membatalkan apa pun. Status pesanan tetap
-        tercatat di board kasir, dan pelanggan bisa balik ke halaman ini
-        lewat link yang diberikan kasir.
+        tercatat di board kasir.
+
+        Nomor meja diambil dari PESANAN INI, bukan dari query halaman.
+        Alasannya: di titik ini pesanan sudah jadi fakta, jadi inilah
+        meja yang benar-benar dipakai pelanggan -- meskipun dia
+        sebelumnya datang tanpa scan QR.
       */}
       <div className="border-t pt-4">
         <Button asChild variant="outline" className="w-full">
-          <Link href="/menu">
+          <Link href={menuHref(order.table_number)}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Kembali ke Menu
           </Link>

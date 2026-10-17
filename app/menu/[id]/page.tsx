@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { MenuDetail } from "@/components/customer/menu-detail";
 import { TableSessionSync } from "@/components/customer/table-session-sync";
 import { normalizeCustomizationGroups } from "@/lib/menu-customizations";
+import { menuHref } from "@/lib/menu-href";
 
 export const revalidate = 0; // selalu ambil stok & harga terbaru
 
@@ -44,7 +45,7 @@ export default async function MenuDetailPage({
   // Pakai normalizer agar data rusak di DB tidak bikin halaman ini error 500.
   const cleanGroups = normalizeCustomizationGroups(row.customization_options);
 
-  const backHref = table ? `/menu?table=${table}` : "/menu";
+  const backHref = menuHref(table);
 
   return (
     <div className="mx-auto max-w-3xl p-4 pb-28 sm:p-6">

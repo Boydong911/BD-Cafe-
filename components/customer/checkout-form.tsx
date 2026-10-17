@@ -10,6 +10,7 @@ import { QrCode, ShoppingBag, Loader2 } from "lucide-react";
 import { useCart } from "@/lib/cart/cart-context";
 import { createOrder, type CheckoutInput } from "@/app/checkout/actions";
 import { ConfirmOrderDialog } from "@/components/customer/confirm-order-dialog";
+import { menuHref } from "@/lib/menu-href";
 
 type PaymentMethod = "qris" | "cash";
 
@@ -27,6 +28,23 @@ export function CheckoutForm() {
   // Modal konfirmasi sebelum pesanan benar-benar dikirim ke kasir.
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  /*
+   * Halaman ini berbeda dari halaman pesanan: nomor meja HANYA ikut
+   * kalau berasal dari scan QR.
+   *
+   * Alasannya `?table=` bukan sekadar penanda tampilan. TableSessionSync
+   * membaca parameter itu dan memanggil applyScannedTable(), yang
+   * mengosongkan keranjang kalau mejaknya berbeda dari sesi aktif.
+   *
+   * Kalau pelanggan memilih meja 02 secara manual lalu menekan "Batal",
+   * menempelkan `?table=02` akan menghapus isi keranjangnya -- persis
+   * kebalikan dari yang diinginkan.
+   *
+   * Di halaman pesanan dan pembayaran, keranjang sudah kosong karena
+   * pesanan sudah dibuat, jadi aman memakai nomor meja apa adanya.
+   */
+  const scannedTableHref = menuHref(session.isScanned ? session.tableNumber : null);
+
   if (items.length === 0) {
     return (
       <div className="space-y-4 rounded-lg border border-dashed p-10 text-center">
@@ -35,7 +53,7 @@ export function CheckoutForm() {
           Keranjang kamu masih kosong. Yuk pilih menu dulu.
         </p>
         <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
-          <Link href="/menu">Lihat Menu</Link>
+          <Link href={scannedTableHref}>Lihat Menu</Link>
         </Button>
       </div>
     );
@@ -256,7 +274,7 @@ export function CheckoutForm() {
           </Button>
 
           <Button asChild variant="outline" className="w-full sm:flex-1">
-            <Link href="/menu">Batal</Link>
+            <Link href={scannedTableHref}>Batal</Link>
           </Button>
         </div>
       </form>
