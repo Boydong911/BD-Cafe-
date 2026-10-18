@@ -24,6 +24,18 @@ const TABS = [
 
 const ACTIVE: OrderStatus[] = ["pending", "confirmed", "preparing", "ready"];
 
+/*
+ * Tab kategori kasir.
+ *
+ * "ready" TIDAK punya tab sendiri. Statusnya tetap dipakai -- satu tombol
+ * "Selesaikan" mengubah ready lalu completed supaya pelanggan sempat
+ * melihat "Siap Disajikan" -- tapi keduanya terjadi dalam satu klik, jadi
+ * tidak ada yang pernah tertahan cukup lama di status itu untuk punya
+ * tab sendiri. Owner minta tabnya dihapus.
+ *
+ * Kartu berstatus ready tidak hilang: ACTIVE di atas masih memuatnya, jadi
+ * muncul di tab "Aktif".
+ */
 const FILTERS: {
   key: string;
   label: string;
@@ -36,7 +48,6 @@ const FILTERS: {
     label: "Diproses",
     match: (s) => s === "confirmed" || s === "preparing",
   },
-  { key: "ready", label: "Siap", match: (s) => s === "ready" },
   { key: "completed", label: "Selesai", match: (s) => s === "completed" },
   { key: "cancelled", label: "Batal", match: (s) => s === "cancelled" },
 ];
