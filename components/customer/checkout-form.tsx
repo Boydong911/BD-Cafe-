@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useEffect, useState, useTransition, type FormEvent } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,13 +11,14 @@ import { useCart } from "@/lib/cart/cart-context";
 import { createOrder, type CheckoutInput } from "@/app/checkout/actions";
 import { ConfirmOrderDialog } from "@/components/customer/confirm-order-dialog";
 import { menuHref } from "@/lib/menu-href";
+import { isFromKasir } from "@/components/customer/order-source";
 
 type PaymentMethod = "qris" | "cash";
 
 /** Tujuan tombol keluar untuk kasir: board antrean, bukan katalog. */
 const KASIR_HREF = "/admin/kasir";
 
-export function CheckoutForm({ staff = false }: { staff?: boolean }) {
+export function CheckoutForm() {
   const { items, totalPrice, clearCart, addItem, session, setManualSession, setCustomerName } =
     useCart();
 
@@ -49,7 +50,13 @@ export function CheckoutForm({ staff = false }: { staff?: boolean }) {
    * Untuk kasir tidak ada `?table=` sama sekali -- dia memesan dari counter,
    * bukan dari meja. Jadi semua tombol keluar mengarah ke board kasir.
    */
-  const scannedTableHref = staff
+  const [fromKasir, setFromKasir] = useState(false);
+
+  useEffect(() => {
+    setFromKasir(isFromKasir());
+  }, []);
+
+  const scannedTableHref = fromKasir
     ? KASIR_HREF
     : menuHref(session.isScanned ? session.tableNumber : null);
 
@@ -98,6 +105,7 @@ export function CheckoutForm({ staff = false }: { staff?: boolean }) {
         session.orderType === "dine_in" ? session.tableNumber!.trim() : undefined,
       notes: notes.trim() || undefined,
       payment_method: paymentMethod,
+      from_kasir: fromKasir,
       items: items.map((i) => ({
         menu_item_id: i.id,
         quantity: i.quantity,

@@ -27,6 +27,16 @@ const checkoutSchema = z.object({
   notes: z.string().optional(),
   payment_method: z.enum(["qris", "cash"]),
   items: z.array(cartItemSchema).min(1, "Keranjang tidak boleh kosong"),
+  /**
+   * Dikirim client, tetap harus combinar dengan `hasStaffSession()` di server.
+   *
+   * Penanda ini HANYA untuk tampilan, tapi ikut menentukan apakah pesanan
+   * tunai langsung dicatat lunas. Kalau tidak digabung dengan sesi staff,
+   * pesanan tunai seorang pelanggan di tablet counter yang dipakai bersama
+   * akan otomatis deemed lunas tanpa pernah membayar -- dia cuma perlu ikut
+   * pakai perangkat tempat kasir masih login.
+   */
+  from_kasir: z.boolean().optional().default(false),
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
@@ -38,7 +48,7 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
     return { error: parsed.error.issues[0]?.message ?? "Data pesanan tidak valid" };
   }
 
-  const { customer_name, order_type, table_number, notes, payment_method, items } =
+  const { customer_name, order_type, table_number, notes, payment_method, items, from_kasir } =
     parsed.data;
 
   if (order_type === "dine_in" && !table_number) {
@@ -172,7 +182,7 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
    * QRIS tetap lewat halaman pembayaran, karena di situ kasir menekan
    * "Sudah Bayar" untuk mendapatkan nomor antrean.
    */
-  if (payment_method === "cash" && (await hasStaffSession())) {
+  if (payment_method === "cash" && from_kasir && (await hasStaffSession())) {
     /*
      * Catat pembayaran TUNAI sekalian.
      *

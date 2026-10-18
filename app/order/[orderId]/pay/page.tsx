@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { createClient, hasStaffSession } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { PaymentPanel } from "./payment-panel";
 import { getPaymentState } from "../actions";
 
@@ -42,11 +42,6 @@ export default async function PayPage({ params }: { params: Promise<{ orderId: s
 
   const order = data[0] as unknown as PayRow;
 
-  // Kasir yang memesan lewat tab "Pesan Menu" butuh jalan keluar yang
-  // berbeda: "Batal Pembayaran" yang membatalkan sungguhan, bukan sekadar
-  // "Kembali ke Menu".
-  const staff = await hasStaffSession();
-
   // Kalau sudah dibayar / dibatalkan, langsung arahkan ke halaman antrean
   if (order.payment_status === "paid" || order.status === "cancelled") {
     return <PaymentPanel orderId={order.id} state="redirect" />;
@@ -65,7 +60,6 @@ export default async function PayPage({ params }: { params: Promise<{ orderId: s
       tableNumber={order.table_number}
       orderType={order.order_type}
       createdAt={order.created_at}
-      staff={staff}
     />
   );
 }

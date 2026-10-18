@@ -11,6 +11,7 @@ import { CartItemList, formatPrice } from "@/components/customer/cart-items";
 import { CartSheet } from "@/components/customer/cart-sheet";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart/cart-context";
+import { clearOrderSource, markFromKasir } from "@/components/customer/order-source";
 import type { CategoryFilterGroup } from "@/components/category-filter";
 import type { MenuCardItem } from "@/components/customer/menu-card";
 import type { KasirOrder, OrderStatus } from "@/types/order";
@@ -182,12 +183,30 @@ export function KasirBoard({
    */
   useEffect(() => {
     if (hydrated) clearScannedTable();
+    // Opening the board starts a fresh cashier order. Clearing it first makes
+    // an abandoned session from the previous round not carry over into a new
+    // one.
+    clearOrderSource();
     // clearScannedTable dibuat ulang tiap render CartProvider, jadi kalau
     // ikut jadi dependensi efek ini akan terus jalan. Sifatnya idempoten
     // (setelah pertama kali isScanned sudah false dan fungsi langsung
     // return), jadi cukup dijalankan sekali saat hydrate selesai.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
+
+  /*
+   * Tandai pesanan ini berasal dari board kasir.
+   *
+   * Ditandai saat tab "Pesan Menu" aktif, bukan saat board dibuka -- jadi
+   * board yang hanya dipakai untuk melihat antrean tidak menandai apa pun,
+   * dan tablet yang sama bisa tetap dipakai pelanggan tanpa ikut mendapat
+   * tombol kasir.
+   *
+   * Dibaca oleh halaman checkout, pembayaran, dan nomor antrean.
+   */
+  useEffect(() => {
+    if (tabKey === "pesan") markFromKasir();
+  }, [tabKey]);
 
   /*
    * Deteksi pesanan baru.

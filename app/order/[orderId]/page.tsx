@@ -5,9 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrderStatusRealtime } from "./order-status-realtime";
-import { ReceiptButton } from "@/components/admin/receipt-button";
-import { hasStaffSession } from "@/lib/supabase/server";
-import { menuHref } from "@/lib/menu-href";
+import { OrderExitButtons } from "@/components/customer/order-exit-buttons";
 import type { KasirOrder } from "@/types/order";
 
 export const revalidate = 0;
@@ -79,11 +77,6 @@ export default async function OrderPage({
 
   const paid = order.payment_status === "paid";
   const hasQueueNumber = paid && !!order.order_number;
-
-  // Sesi staff = kasir yang memesan lewat tab "Pesan Menu". Ditentukan dari
-  // cookie, bukan dari query URL, jadi tetap benar walau kasir membuka link
-  // pesanan secara langsung atau me-refresh.
-  const staff = await hasStaffSession();
 
   // Bentuk untuk ReceiptPrint. Kolom di sini sudah pas dengan yang dibaca
   // struk, jadi tidak perlu transformasi lagi.
@@ -187,63 +180,21 @@ export default async function OrderPage({
       </div>
 
       {/*
-        Jalan keluar untuk KASIR.
+        Jalan keluar. Bentuknya ditentukan di dalam OrderExitButtons:
 
-        Kalau kasir yang memesan lewat tab "Pesan Menu", halaman ini adalah
-        tempat dia melihat nomor antrean sebelum balik ke board. Dua tombol
-        yang paling dibutuhkan saat itu: cetak struk, dan balik ke kasir.
+          kasir     -> Cetak Struk + Kembali ke Kasir
+          pelanggan -> Kembali ke Menu (ke /menu?table=XX kalau dari meja)
 
-        Hanya untuk sesi yang sudah login. Pelanggan biasa tidak melihat
-        "Kembali ke Kasir" karena middleware akan mengarahkannya ke halaman
-        login kasir kalau tetap memencet.
+        Penentuannya BUKAN "ada sesi staff". Di tablet counter yang dipakai
+        bersama, pelanggan yang sedang memesan punya sesi staff yang sama, jadi
+        kalau memakai sesi dia ikut melihat tombol kasir -- dan "Kembali ke
+        Kasir" bisa mendaratkannya di board staff. Itu bug yang pernah terjadi.
 
-        `KasirOrder` dibangun ulang di sini karena tipe itu sekarang menyatakan
-        HANYA kolom yang benar-benar diambil board kasir, sementara
-        `get_order_by_id` mengembalikan kolom database yang lebih lengkap.
+        Nomor meja untuk tombol pelanggan diambil dari PESANAN INI, bukan dari
+        query halaman: di titik ini pesanan sudah jadi fakta, jadi inilah meja
+        yang benar-benar dipakai pelanggan.
       */}
-      {staff && (
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <ReceiptButton order={receiptOrder} className="flex-1" />
-
-          <Button asChild className="flex-1">
-            <Link href="/admin/kasir">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Kembali ke Kasir
-            </Link>
-          </Button>
-        </div>
-      )}
-
-      {/*
-        Jalan keluar untuk PELANGGAN saja.
-
-        Kasir TIDAK melihat tombol ini. Owner minta dihapus untuk alur kasir:
-        dari counter, "Kembali ke Menu" cuma menambah satu langkah tak
-        berguna -- kasir sudah tahu letaknya di board, dan membuka katalog
-        bukan bagian dari tugasnya. Dua tombol di blok staff sudah cukup.
-
-        Pelanggan yang antre di kasir tidak mungkin menatap layar terus --
-        mereka mau lihat-lihat menu dulu kalau mau pesan lagi. Tombolnya
-        diletakkan paling bawah supaya tidak memenuhi layar di HP.
-
-        Pergi ke /menu tidak membatalkan apa pun. Status pesanan tetap
-        tercatat di board kasir.
-
-        Nomor meja diambil dari PESANAN INI, bukan dari query halaman.
-        Alasannya: di titik ini pesanan sudah jadi fakta, jadi inilah
-        meja yang benar-benar dipakai pelanggan -- meskipun dia
-        sebelumnya datang tanpa scan QR.
-      */}
-      {!staff && (
-        <div className="border-t pt-4">
-          <Button asChild variant="outline" className="w-full">
-            <Link href={menuHref(order.table_number)}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Kembali ke Menu
-            </Link>
-          </Button>
-        </div>
-      )}
+      <OrderExitButtons order={receiptOrder} />
     </div>
   );
 }

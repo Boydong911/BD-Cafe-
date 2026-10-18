@@ -9,6 +9,7 @@ import { AlertCircle, ArrowLeft, CheckCircle2, Clock, Loader2, Store, XCircle } 
 import { confirmQrisPayment, expireOrder } from "../actions";
 import { PAYMENT_WINDOW_MINUTES } from "@/lib/payment";
 import { menuHref } from "@/lib/menu-href";
+import { isFromKasir } from "@/components/customer/order-source";
 
 const rupiah = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
 
@@ -23,8 +24,6 @@ type Props =
       tableNumber: string | null;
       orderType: string;
       createdAt: string;
-      /** Halaman ini dibuka oleh kasir, bukan pelanggan. */
-      staff: boolean;
     };
 
 function formatCountdown(seconds: number) {
@@ -49,9 +48,23 @@ export function PaymentPanel(props: Props) {
     );
   }
 
-  const { orderId, state, method, total, customerName, tableNumber, orderType, createdAt, staff } = props;
+  const { orderId, state, method, total, customerName, tableNumber, orderType, createdAt } = props;
   const expired = state === "expired";
   const isCash = method === "cash";
+
+  /*
+   * Penanda "pesanan ini dari board kasir", bukan "ada sesi staff".
+   *
+   * Di tablet counter yang dipakai bersama, pelanggan yang sedang memesan
+   * punya sesi staff yang sama. Kalau penentunya sesi, dia ikut melihat
+   * "Batal Pembayaran" yang mengarah ke board staff. sessionStorage hanya
+   * dibaca di browser, jadi harus lewat useEffect.
+   */
+  const [fromKasir, setFromKasir] = useState(false);
+
+  useEffect(() => {
+    setFromKasir(isFromKasir());
+  }, []);
 
   /*
    * Dihitung sekali di sini lalu dipakai ketiga sub-komponen, supaya tidak
@@ -74,7 +87,7 @@ export function PaymentPanel(props: Props) {
       {expired ? (
         <ExpiredBox backToMenu={backToMenu} staff={false} />
       ) : isCash ? (
-        <CashBox orderId={orderId} backToMenu={backToMenu} staff={false} />
+        <CashBox orderId={orderId} backToMenu={backToMenu} staff={fromKasir} />
       ) : (
         <QrisBox
           orderId={orderId}
@@ -84,7 +97,7 @@ export function PaymentPanel(props: Props) {
           orderType={orderType}
           createdAt={createdAt}
           backToMenu={backToMenu}
-          staff={staff}
+          staff={fromKasir}
         />
       )}
     </div>
