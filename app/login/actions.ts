@@ -50,12 +50,9 @@ async function verifyCredentials(
     // ada atau tidak. Detail sebenarnya hanya ditulis ke log server, karena
     // "get_login_email tidak mengembalikan email" dan "RPC-nya error" adalah
     // dua masalah yang sangat berbeda.
-    console.error("[login] get_login_email gagal:", {
-      username,
-      rpcError: rpcError?.message ?? null,
-      emailDitemukan: email ?? null,
-    });
-    return { ok: false, error: "Username atau password salah." };
+    const detail = `DEBUG-1 rpc: ${rpcError?.message ?? "tidak ada error"} | email: ${email ?? "null"}`;
+    console.error("[login]", detail);
+    return { ok: false, error: detail };
   }
 
   // 2) Sign-in sesungguhnya ke Supabase Auth — password di-verifikasi
@@ -75,14 +72,9 @@ async function verifyCredentials(
      * username itu ada. Detailnya ditulis ke log server saja, TIDAK pernah
      * dikirim ke peramban.
      */
-    console.error("[login] signInWithPassword gagal:", {
-      username,
-      email,
-      status: signInError?.status ?? null,
-      code: signInError?.code ?? null,
-      message: signInError?.message ?? null,
-    });
-    return { ok: false, error: "Username atau password salah." };
+    const detail = `DEBUG-2 auth: status=${signInError?.status ?? "-"} code=${signInError?.code ?? "-"} pesan=${signInError?.message ?? "-"} | email=${email} | adaUser=${Boolean(signInData?.user)}`;
+    console.error("[login]", detail);
+    return { ok: false, error: detail };
   }
 
   // 3) Ambil role untuk menentukan halaman tujuan.
