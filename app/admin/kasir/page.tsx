@@ -33,6 +33,19 @@ export default async function KasirPage() {
 
   const now = new Date();
 
+  /*
+   * Nama kasir yang sedang memakai halaman ini.
+   *
+   * Hanya satu baris profil milik orang yang sedang login. RLS
+   * "profiles_select_self_or_owner" sudah mengizinkan itu untuk staf
+   * (`id = auth.uid()`), jadi tidak perlu loosening policy apa pun.
+   *
+   * Sengaja tidak dibikin wajib: kalau gagal diambil, board tetap harus
+   * jalan. Kasir yang sedang login tidak boleh kehilangan board hanya
+   * karena nama gagal dimuat.
+   */
+  const kasirName = await fetchCurrentStaffName(supabase);
+
   // Katalog untuk tab "Pesan Menu". Menu jarang berubah dalam satu shift,
   // jadi query tambahan ini murah dibanding menulis ulang query di tab itu.
   const { items: menuItems, groups: categoryGroups } = await fetchMenuCatalog();
@@ -124,6 +137,40 @@ export default async function KasirPage() {
       orders={orders}
       menuItems={menuItems}
       categoryGroups={categoryGroups}
+      kasirName={kasirName}
     />
   );
+}
+
+/**
+ * Nama lengkap staf yang sedang login, untuk ditampilkan di board kasir.
+ *
+ * Fallback ke username kalau full_name kosong. Keduanya milik orang yang
+ * sedang login saja -- RLS "profiles_select_self_or_owner" membatasi
+ * select ke baris sendiri.
+ *
+ * Gagal membaca profil TIDAK membuat halaman error: papan antrean harus
+ * tetap bisa dipakai. Yang hilang cuma nama, bukan board-nya.
+ */
+async function fetchCurrentStaffName(
+  supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<string | null> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return null;
+
+    const { data } = await supabase
+      .from("profiles")
+      .select("full_name, username")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const name = data?.full_name?.trim();
+    return name ? name : (data?.username?.trim() ?? null);
+  } catch {
+    return null;
+  }
 }

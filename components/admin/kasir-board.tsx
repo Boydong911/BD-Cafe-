@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { UserRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { OrderCard } from "@/components/admin/order-card";
 import { ReceiptPrint } from "@/components/admin/receipt-print";
@@ -84,11 +85,14 @@ export function KasirBoard({
   orders,
   menuItems,
   categoryGroups,
+  kasirName,
 }: {
   orders: KasirOrder[];
   /** Katalog untuk tab "Pesan Menu". Diambil server, bukan fetch dari browser. */
   menuItems: MenuCardItem[];
   categoryGroups: CategoryFilterGroup[];
+  /** Nama kasir yang sedang memakai halaman ini. Kosong kalau gagal diambil. */
+  kasirName: string | null;
 }) {
   const router = useRouter();
   const { totalItems, totalPrice, clearScannedTable, hydrated } = useCart();
@@ -275,6 +279,26 @@ export function KasirBoard({
 
   return (
     <div className="space-y-5">
+      {/*
+        Nama kasir yang sedang memakai halaman ini.
+
+        Setiap karyawan punya akun sendiri, dan semua melihat papan
+        antrean yang sama secara real-time. Tanpa nama di layar, tidak ada
+        cara tahu siapa yang sedang menekan "Selesaikan" -- dan setelah
+        selesai, siapa yang menekan tidak disimpan di database.
+
+        Hanya tampilan. Tidak ada aksi yang bergantung padanya, dan
+        mengambilnya bukan syarat apa pun.
+      */}
+      {kasirName && (
+        <div className="flex items-center gap-2">
+          <UserRound className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="text-lg font-semibold leading-none">
+            {kasirName}
+          </span>
+        </div>
+      )}
+
       {/*
         Dua tab utama kasir.
 
