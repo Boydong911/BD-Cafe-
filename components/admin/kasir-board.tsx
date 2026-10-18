@@ -8,6 +8,7 @@ import { OrderCard } from "@/components/admin/order-card";
 import { ReceiptPrint } from "@/components/admin/receipt-print";
 import { MenuCatalog } from "@/components/customer/menu-catalog";
 import { CartItemList, formatPrice } from "@/components/customer/cart-items";
+import { CartSheet } from "@/components/customer/cart-sheet";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart/cart-context";
 import type { CategoryFilterGroup } from "@/components/category-filter";
@@ -252,13 +253,11 @@ export function KasirBoard({
 
       {tabKey === "pesan" ? (
         /*
-         * 75 : 25 -- katalog di kiri, isi keranjang di kanan.
-         *
-         * Panel keranjang memakai komponen yang sama dengan sheet keranjang di
-         * halaman customer, jadi isi dan tombolnya tidak berbeda.
-         * `CartItemList` bergaya panel gelap, jadi panel di sini juga gelap
-         * supaya kontrasnya benar.
+         * 75 : 25 di layar lebar. Di bawah lg tidak ada kolom kanan --
+         * keranjang jadi tombol mengambang yang membuka sheet, sama seperti
+         * di /menu?table=02.
          */
+        <>
         <div className="grid gap-4 lg:grid-cols-[3fr_1fr]">
           <MenuCatalog
             items={menuItems}
@@ -276,10 +275,11 @@ export function KasirBoard({
             sticky di atas dan setinggi sekitar 68px. Kalau top-nya lebih
             kecil, panel ini akan ketutup header.
 
-            Di bawah lg panel ikut mengalir normal -- tidak sticky, karena
-            di situ sudah jadi satu kolom di bawah katalog.
+            `hidden` di bawah lg karena di sana panel ini akan jadi kotak
+            gelap besar tepat di bawah katalog -- cuma memakan layar. Yang
+            dipakai kasir di HP adalah CartSheet di bawah.
           */}
-          <aside className="flex flex-col rounded-xl bg-primary p-4 text-primary-foreground lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:self-start lg:overflow-hidden">
+          <aside className="hidden flex-col rounded-xl bg-primary p-4 text-primary-foreground lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:flex lg:self-start lg:overflow-hidden">
             <h2 className="font-serif text-lg">Keranjang</h2>
             <p className="mb-3 text-xs text-primary-foreground/60">
               {totalItems > 0 ? `${totalItems} item dipilih` : "Belum ada item"}
@@ -303,6 +303,20 @@ export function KasirBoard({
             </div>
           </aside>
         </div>
+
+        {/*
+          Keranjang untuk HP: komponen CartSheet yang PERSIS sama dengan
+          yang dipakai /menu?table=02 -- tombol mengambang di kanan bawah
+          yang membuka panel geser. Jadi isi, tombol jumlah, kolom nama,
+          dan tombol checkout-nya identik dengan sisi pelanggan.
+
+          Dibungkus `lg:hidden` karena di layar lebar keranjang sudah tampil
+          sebagai panel kanan yang menempel.
+        */}
+        <div className="lg:hidden">
+          <CartSheet />
+        </div>
+        </>
       ) : (
         <>
       {/*
