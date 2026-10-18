@@ -5,7 +5,10 @@ import Link from "next/link";
 import { ArrowLeft, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrderStatusRealtime } from "./order-status-realtime";
+import { ReceiptButton } from "@/components/admin/receipt-button";
+import { hasStaffSession } from "@/lib/supabase/server";
 import { menuHref } from "@/lib/menu-href";
+import type { KasirOrder } from "@/types/order";
 
 export const revalidate = 0;
 
@@ -24,21 +27,22 @@ type OrderRow = {
   id: string;
   order_number: string | null;
   customer_name: string;
-  order_type: string;
+  order_type: "dine_in" | "takeaway";
   table_number: string | null;
+  notes: string | null;
   payment_method: "qris" | "cash";
   payment_status: "pending" | "paid";
-  status: string;
+  status:
+    | "pending"
+    | "confirmed"
+    | "preparing"
+    | "ready"
+    | "completed"
+    | "cancelled";
   subtotal: number | string;
   total: number | string;
   created_at: string;
-  order_items: {
-    id: string;
-    quantity: number;
-    menu_name: string;
-    subtotal: number | string;
-    selected_customizations: unknown;
-  }[];
+  order_items: KasirOrder["order_items"];
 };
 
 export default async function OrderPage({
@@ -75,6 +79,28 @@ export default async function OrderPage({
 
   const paid = order.payment_status === "paid";
   const hasQueueNumber = paid && !!order.order_number;
+
+  // Sesi staff = kasir yang memesan lewat tab "Pesan Menu". Ditentukan dari
+  // cookie, bukan dari query URL, jadi tetap benar walau kasir membuka link
+  // pesanan secara langsung atau me-refresh.
+  const staff = await hasStaffSession();
+
+  // Bentuk untuk ReceiptPrint. Kolom di sini sudah pas dengan yang dibaca
+  // struk, jadi tidak perlu transformasi lagi.
+  const receiptOrder: KasirOrder = {
+    id: order.id,
+    order_number: order.order_number,
+    customer_name: order.customer_name,
+    order_type: order.order_type,
+    table_number: order.table_number,
+    payment_method: order.payment_method,
+    payment_status: order.payment_status,
+    status: order.status,
+    notes: order.notes,
+    total: Number(order.total),
+    created_at: order.created_at,
+    order_items: items,
+  };
 
   return (
     <div className="mx-auto max-w-lg space-y-6 p-6">
@@ -161,7 +187,35 @@ export default async function OrderPage({
       </div>
 
       {/*
-        Jalan keluar dari halaman ini.
+        Jalan keluar untuk KASIR.
+
+        Kalau kasir yang memesan lewat tab "Pesan Menu", halaman ini adalah
+        tempat dia melihat nomor antrean sebelum balik ke board. Dua tombol
+        yang paling dibutuhkan saat itu: cetak struk, dan balik ke kasir.
+
+        Hanya untuk sesi yang sudah login. Pelanggan biasa tidak melihat
+        "Kembali ke Kasir" karena middleware akan mengarahkannya ke halaman
+        login kasir kalau tetap memencet.
+
+        `KasirOrder` dibangun ulang di sini karena tipe itu sekarang menyatakan
+        HANYA kolom yang benar-benar diambil board kasir, sementara
+        `get_order_by_id` mengembalikan kolom database yang lebih lengkap.
+      */}
+      {staff && (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <ReceiptButton order={receiptOrder} className="flex-1" />
+
+          <Button asChild className="flex-1">
+            <Link href="/admin/kasir">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Kembali ke Kasir
+            </Link>
+          </Button>
+        </div>
+      )}
+
+      {/*
+        Jalan keluar untuk PELANGGAN.
 
         Pelanggan yang antre di kasir tidak mungkin menatap layar terus --
         mereka mau lihat-lihat menu dulu kalau mau pesan lagi. Tombolnya

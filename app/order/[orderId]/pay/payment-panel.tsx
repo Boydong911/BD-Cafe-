@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, ArrowLeft, CheckCircle2, Clock, Loader2, Store } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, Clock, Loader2, Store, XCircle } from "lucide-react";
 import { confirmQrisPayment, expireOrder } from "../actions";
 import { PAYMENT_WINDOW_MINUTES } from "@/lib/payment";
 import { menuHref } from "@/lib/menu-href";
@@ -23,6 +23,8 @@ type Props =
       tableNumber: string | null;
       orderType: string;
       createdAt: string;
+      /** Halaman ini dibuka oleh kasir, bukan pelanggan. */
+      staff: boolean;
     };
 
 function formatCountdown(seconds: number) {
@@ -47,12 +49,17 @@ export function PaymentPanel(props: Props) {
     );
   }
 
-  const { orderId, state, method, total, customerName, tableNumber, orderType, createdAt } = props;
+  const { orderId, state, method, total, customerName, tableNumber, orderType, createdAt, staff } = props;
   const expired = state === "expired";
   const isCash = method === "cash";
 
-  // Dihitung sekali di sini lalu dipakai ketiga sub-komponen, supaya tidak
-  // ada tempat yang lupa menempelkan nomor meja.
+  /*
+   * Dihitung sekali di sini lalu dipakai ketiga sub-komponen, supaya tidak
+   * ada tempat yang lupa menempelkan nomor meja.
+   *
+   * Untuk kasir, tombol paling bawah bukan "Kembali ke Menu" melainkan
+   * "Batal Pembayaran" yang menuju board kasir.
+   */
   const backToMenu = menuHref(tableNumber);
 
   return (
@@ -65,9 +72,9 @@ export function PaymentPanel(props: Props) {
       </div>
 
       {expired ? (
-        <ExpiredBox backToMenu={backToMenu} />
+        <ExpiredBox backToMenu={backToMenu} staff={false} />
       ) : isCash ? (
-        <CashBox orderId={orderId} backToMenu={backToMenu} />
+        <CashBox orderId={orderId} backToMenu={backToMenu} staff={false} />
       ) : (
         <QrisBox
           orderId={orderId}
@@ -77,6 +84,7 @@ export function PaymentPanel(props: Props) {
           orderType={orderType}
           createdAt={createdAt}
           backToMenu={backToMenu}
+          staff={staff}
         />
       )}
     </div>
@@ -90,9 +98,11 @@ export function PaymentPanel(props: Props) {
 function CashBox({
   orderId,
   backToMenu,
+  staff,
 }: {
   orderId: string;
   backToMenu: string;
+  staff: boolean;
 }) {
   const router = useRouter();
 
@@ -121,29 +131,42 @@ function CashBox({
       </div>
 
       <div className="space-y-2">
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => router.push(`/order/${orderId}`)}
-        >
-          Lihat Detail Pesanan
-        </Button>
-
-        {/*
-          Pelanggan sering mau lihat-lihat menu lagi sambil antre di kasir.
-          Pergi ke /menu tidak membatalkan pesanan -- statusnya tetap
-          "menunggu bayar" dan kasir masih melihatnya di board.
-
-          Catatan: begitu pindah halaman, polling di useRealtimePayment ikut
-          berhenti. Pelanggan yang kembali nanti harus buka lagi halaman
-          status lewat link yang diberikan kasir.
-        */}
-        <Button asChild variant="ghost" className="w-full text-muted-foreground">
-          <Link href={backToMenu}>
+        {staff ? (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => router.push("/admin/kasir")}
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Kembali ke Menu
-          </Link>
-        </Button>
+            Kembali ke Kasir
+          </Button>
+        ) : (
+          <>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => router.push(`/order/${orderId}`)}
+            >
+              Lihat Detail Pesanan
+            </Button>
+
+            {/*
+              Pelanggan sering mau lihat-lihat menu lagi sambil antre di kasir.
+              Pergi ke /menu tidak membatalkan pesanan -- statusnya tetap
+              "menunggu bayar" dan kasir masih melihatnya di board.
+
+              Catatan: begitu pindah halaman, polling di useRealtimePayment ikut
+              berhenti. Pelanggan yang kembali nanti harus buka lagi halaman
+              status lewat link yang diberikan kasir.
+            */}
+            <Button asChild variant="ghost" className="w-full text-muted-foreground">
+              <Link href={backToMenu}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Kembali ke Menu
+              </Link>
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -161,6 +184,7 @@ function QrisBox({
   orderType,
   createdAt,
   backToMenu,
+  staff,
 }: {
   orderId: string;
   total: number;
@@ -169,6 +193,7 @@ function QrisBox({
   orderType: string;
   createdAt: string;
   backToMenu: string;
+  staff: boolean;
 }) {
   const router = useRouter();
   const [remaining, setRemaining] = useState(() => secondsLeft(createdAt));
@@ -215,6 +240,32 @@ function QrisBox({
         return;
       }
       router.replace(`/order/${orderId}`);
+    });
+  }
+
+  /*
+   * Batal dari sisi kasir.
+   *
+   * `expireOrder` memanggil RPC `cancel_unpaid_order`, yang hanya mengubah
+   * pesanan yang MASIH pending. Kalau ternyata sudah dibayar, RPC mengembalikan
+   * false -- dan itu ditampilkan sebagai error, bukan diam-diam kembali ke
+   * kasir sambil pesanan tetap jalan.
+   */
+  function handleCancelByStaff() {
+    setError(null);
+    startTransition(async () => {
+      const result = await expireOrder(orderId);
+
+      if (!("success" in result) || result.success === false) {
+        setError(
+          "success" in result
+            ? result.error
+            : "Pesanan sudah dibayar atau sudah dibatalkan."
+        );
+        return;
+      }
+
+      router.push("/admin/kasir");
     });
   }
 
@@ -300,16 +351,52 @@ function QrisBox({
         pesan-nya hilang.
       */}
       <div className="space-y-2 border-t pt-4">
-        <Button asChild variant="outline" className="w-full">
-          <Link href={backToMenu}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Kembali ke Menu
-          </Link>
-        </Button>
-        <p className="text-center text-[11px] text-muted-foreground">
-          Pergi dulu boleh — pesanan ini tetap menunggu pembayaran sampai{" "}
-          {PAYMENT_WINDOW_MINUTES} menit lagi.
-        </p>
+        {staff ? (
+          /*
+            Kasir membatalkan berarti membatalkan pesanan sungguhan, bukan
+            cuma berpindah halaman. Pelanggan yang singgah ke halaman lain
+            masih boleh balik lagi sebelum timer habis; kasir yang salah
+            tekan tidak.
+          */
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full text-destructive hover:text-destructive"
+              disabled={isPending}
+              onClick={handleCancelByStaff}
+            >
+              {isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <XCircle className="mr-2 h-4 w-4" />
+              )}
+              Batal Pembayaran
+            </Button>
+            <p className="text-center text-[11px] text-muted-foreground">
+              Pesanan ini akan dibatalkan dan kasir kembali ke board antrean.
+            </p>
+          </>
+        ) : (
+          <>
+            <Button asChild variant="outline" className="w-full">
+              <Link href={backToMenu}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Kembali ke Menu
+              </Link>
+            </Button>
+            {/*
+              Punya timer 15 menit yang tetap berjalan meski pelanggan pindah
+              halaman. Beri tahu supaya dia tahu harus balik lagi sebelum waktu
+              habis -- kalau tidak, pesanan dibatalkan diam-diam dan pelanggan
+              mengira pesanannya hilang.
+            */}
+            <p className="text-center text-[11px] text-muted-foreground">
+              Pergi dulu boleh — pesanan ini tetap menunggu pembayaran sampai{" "}
+              {PAYMENT_WINDOW_MINUTES} menit lagi.
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
@@ -319,7 +406,7 @@ function QrisBox({
 /* KADU BATAS WAKTU                                                     */
 /* ------------------------------------------------------------------ */
 
-function ExpiredBox({ backToMenu }: { backToMenu: string }) {
+function ExpiredBox({ backToMenu, staff }: { backToMenu: string; staff: boolean }) {
   return (
     <div className="space-y-4 rounded-xl border-2 border-destructive/30 bg-destructive/5 p-6 text-center">
       <AlertCircle className="mx-auto h-10 w-10 text-destructive" />

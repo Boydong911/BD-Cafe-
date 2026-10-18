@@ -32,3 +32,21 @@ export async function createClient() {
     }
   );
 }
+
+/**
+ * True kalau request ini datang dari sesi yang sudah login (kasir/owner).
+ *
+ * ⚠️ INI BUKAN GERBANG KEAMANAN. Fungsinya hanya memilih tombol mana yang
+ * ditampilkan, misalnya "Cetak Struk" atau "Batal Pembayaran" di halaman
+ * pesanan. Yang menentukan boleh-tidaknya adalah RLS dan RPC, bukan ini --
+ * meski UI-nya dimanipulasi, aksi tetap ditolak di server.
+ *
+ * Pakai `getSession()` yang membaca cookie, bukan `getUser()` yang memvalidasi
+ * JWT ke server auth. Untuk keputusan tampilan itu cukup, dan tidak menambah
+ * satu round-trip ke setiap halaman pesanan.
+ */
+export async function hasStaffSession(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getSession();
+  return data.session !== null;
+}

@@ -3,7 +3,11 @@
 import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { confirmPayment, updateOrderStatus } from "@/app/admin/kasir/actions";
+import {
+  completeQrisOrder,
+  confirmPayment,
+  updateOrderStatus,
+} from "@/app/admin/kasir/actions";
 import type { KasirOrder, OrderStatus } from "@/types/order";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
@@ -99,9 +103,9 @@ export function OrderCard({
   const isReadyToServe = order.status === "ready";
 
   /*
-   * Tombol konfirmasi bayar tetap muncul walau sudah lunas, karena untuk
-   * QRIS pesanan sudah `paid` sebelum kasir menyentuhinya dan kasir tetap
-   * perlu tombol ini untuk mencetak struk.
+   * Tombol aksi utama muncul selama pesanan belum selesai/dibatalkan.
+   * Untuk QRIS tombolnya bernama "Selesaikan" (bukan "Konfirmasi Bayar"),
+   * karena pembayarannya sudah dilakukan pelanggan.
    */
   const canConfirmPayment =
     !isCancelled && !isDone && !isReadyToServe;
@@ -244,15 +248,13 @@ export function OrderCard({
 
         <div className="flex flex-wrap gap-2">
           {/*
-            Tombol "Konfirmasi Bayar" muncul selama pesanan belum masuk status
-            `ready` — bukan selama belum lunas.
+            QRIS tidak punya tombol konfirmasi bayar. Pelanggan sudah menekan
+            "Sudah Bayar" di halamannya sendiri, jadi dari sisi kasir tidak ada
+            yang perlu dikonfirmasi -- hanya diselesaikan.
 
-            Untuk QRIS, customer sudah menekan "Sudah Bayar" di halamannya,
-            jadi pesanan tiba di kasir dalam keadaan `paid`. Kalau tombol ini
-            disembunyikan saat sudah lunas, kasir kehilangan satu-satunya cara
-            untuk mencetak struk.
+            TUNAI tetap perlu: uang baru diterima di tangan kasir.
           */}
-          {canConfirmPayment && (
+          {canConfirmPayment && order.payment_method !== "qris" && (
             <Button
               type="button"
               variant="default"
@@ -261,11 +263,20 @@ export function OrderCard({
               disabled={isPending}
               onClick={handleConfirmPayment}
             >
-              {isPending
-                ? "Memproses..."
-                : order.payment_method === "qris"
-                  ? "Konfirmasi Bayar QRIS"
-                  : "Konfirmasi Bayar"}
+              {isPending ? "Memproses..." : "Konfirmasi Bayar"}
+            </Button>
+          )}
+
+          {canConfirmPayment && order.payment_method === "qris" && (
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              className="flex-1"
+              disabled={isPending}
+              onClick={() => run(() => completeQrisOrder(order.id))}
+            >
+              {isPending ? "Memproses..." : "Selesaikan"}
             </Button>
           )}
 

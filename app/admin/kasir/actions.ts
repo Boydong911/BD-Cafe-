@@ -230,3 +230,86 @@ export async function confirmPayment(
   revalidatePath("/admin/owner/penjualan");
   return { success: true };
 }
+
+/**
+ * Selesaikan pesanan QRIS dalam satu klik.
+ *
+ * Owner minta langkah "Konfirmasi Bayar QRIS" dihilang dari alur kasir --
+ * pesanan QRIS sudah dibayar oleh pelanggan, jadi kasir tidak perlu
+ * mengonfirmasi apa-apa, hanya menyelesaikan.
+ *
+ * Status tetap dikrok dua tahap (ready lalu completed), bukan langsung
+ * completed, supaya pesanan sempat terlihat sebagai "Siap Disajikan" di
+ * halaman pelanggan. Kalau langsung completed, pelanggan tidak pernah melihat
+ * tahap itu.
+ *
+ * Idempoten: aman ditekan dua kali. Kalau sudah `completed`, tidak ada yang
+ * diubah dan tetap dianggap berhasil.
+ */
+export async function completeQrisOrder(orderId: string): Promise<ActionResult> {
+  if (!z.string().uuid().safeParse(orderId).success) {
+    return { success: false, error: "Data tidak valid." };
+  }
+
+  const { supabase, ok } = await assertStaff();
+  if (!ok) return { success: false, error: "Akses ditolak." };
+
+  const { data: current, error: fetchError } = await supabase
+    .from("orders")
+    .select("status, payment_method, payment_status")
+    .eq("id", orderId)
+    .single();
+
+  if (fetchError || !current) {
+    return { success: false, error: "Pesanan tidak ditemukan." };
+  }
+
+  const cur = current as unknown as {
+    status: OrderStatus;
+    payment_method: PaymentMethod;
+    payment_status: PaymentStatus;
+  };
+
+  if (cur.status === "cancelled") {
+    return { success: false, error: "Pesanan sudah dibatalkan." };
+  }
+
+  if (cur.status === "completed") {
+    return { success: true };
+  }
+
+  // Penjaga: jangan sampai pesanan BELUM LUNAS bisa diselesaikan lewat
+  // jalan pintas ini.
+  if (cur.payment_status !== "paid") {
+    return { success: false, error: "Pesanan belum lunas." };
+  }
+
+  // Tahap 1: ke "ready" saja kalau belum di sana.
+  if (cur.status !== "ready") {
+    const { error: readyError } = await supabase
+      .from("orders")
+      .update({ status: "ready" })
+      .eq("id", orderId);
+
+    if (readyError) {
+      console.error("[kasir] complete_qris_order (ready) gagal:", readyError.message);
+      return { success: false, error: "Gagal menyiapkan pesanan." };
+    }
+  }
+
+  // Tahap 2: selesaikan.
+  const { error: doneError } = await supabase
+    .from("orders")
+    .update({ status: "completed" })
+    .eq("id", orderId);
+
+  if (doneError) {
+    console.error("[kasir] complete_qris_order (completed) gagal:", doneError.message);
+    return { success: false, error: "Gagal menyelesaikan pesanan." };
+  }
+
+  revalidatePath("/admin/kasir");
+  revalidatePath("/admin/owner");
+  revalidatePath("/admin/owner/penjualan");
+  return { success: true };
+}
