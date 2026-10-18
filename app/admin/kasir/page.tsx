@@ -49,6 +49,24 @@ export default async function KasirPage() {
    *   1) order yang masih aktif, kapan pun dibuat
    *   2) order yang baru selesai/batal dalam 24 jam terakhir
    * Order yang cocok keduanya hanya muncul sekali (de-dupe by id).
+   *
+   * Owner minta kartu "Belum Bayar" tidak muncul di board. Filternya:
+   *   tampilkan kalau sudah lunas, ATAU dibayar tunai
+   *
+   * ⚠️ "dibayar tunai" (yang BELUM lunas) WAJIB ikut tampilkan. Pelanggan
+   * yang pesan tunai akan mendarat di /pay lalu diberi tahu "bayar di
+   * kasir" -- kalau kartunya tidak ada di board, kasir tidak punya apa pun
+   * untuk ditekan "Selesaikan" dan uangnya tidak pernah tercatat.
+   *
+   * Yang disembunyikan hanya QRIS yang belum dibayar: sejak tombol
+   * "Batalkan Pembayaran" ada, itu pilihan pelanggannya (bayar atau batal),
+   * jadi tidak perlu menggantung di board sampai timer 15 menit habis.
+   * Begitu dia menekan "Sudah Bayar", order-nya lunas dan langsung muncul
+   * di sini.
+   *
+   * Catatan: `.or()` di sini menyatu DUA kolom (payment_status dan
+   * payment_method) pada satu level, bukan mencampur status. `.in("status")`
+   * tetap AND-ed di luar oleh PostgREST.
    */
   const [active, recentlyFinished] = await Promise.all([
     supabase
@@ -57,6 +75,7 @@ export default async function KasirPage() {
         "id, order_number, customer_name, order_type, table_number, payment_method, payment_status, status, notes, total, created_at, order_items(id, quantity, menu_name, subtotal, selected_customizations)"
       )
       .in("status", ["pending", "confirmed", "preparing", "ready"])
+      .or("payment_status.eq.paid,payment_method.eq.cash")
       .order("created_at", { ascending: true }),
     supabase
       .from("orders")

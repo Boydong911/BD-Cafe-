@@ -67,13 +67,14 @@ export function PaymentPanel(props: Props) {
   }, []);
 
   /*
-   * Dihitung sekali di sini lalu dipakai ketiga sub-komponen, supaya tidak
-   * ada tempat yang lupa menempelkan nomor meja.
+   * Dihitung sekali di sini lalu dipakai sub-komponen, supaya tidak ada
+   * tempat yang lupa menempelkan nomor meja.
    *
-   * Untuk kasir, tombol paling bawah bukan "Kembali ke Menu" melainkan
-   * "Batal Pembayaran" yang menuju board kasir.
+   * Pelanggan batal bayar -> balik ke /menu?table=XX (kalau pesanan dari meja).
+   * Kasir batal bayar    -> balik ke board antrean.
    */
   const backToMenu = menuHref(tableNumber);
+  const cancelHref = fromKasir ? "/admin/kasir" : backToMenu;
 
   return (
     <div className="mx-auto max-w-md space-y-6 p-6">
@@ -85,7 +86,10 @@ export function PaymentPanel(props: Props) {
       </div>
 
       {expired ? (
-        <ExpiredBox backToMenu={backToMenu} staff={false} />
+        <ExpiredBox
+          backHref={cancelHref}
+          backLabel={fromKasir ? "Kembali ke Kasir" : "Kembali ke Menu"}
+        />
       ) : isCash ? (
         <CashBox orderId={orderId} backToMenu={backToMenu} staff={fromKasir} />
       ) : (
@@ -96,8 +100,7 @@ export function PaymentPanel(props: Props) {
           tableNumber={tableNumber}
           orderType={orderType}
           createdAt={createdAt}
-          backToMenu={backToMenu}
-          staff={fromKasir}
+          cancelHref={cancelHref}
         />
       )}
     </div>
@@ -196,8 +199,7 @@ function QrisBox({
   tableNumber,
   orderType,
   createdAt,
-  backToMenu,
-  staff,
+  cancelHref,
 }: {
   orderId: string;
   total: number;
@@ -205,8 +207,8 @@ function QrisBox({
   tableNumber: string | null;
   orderType: string;
   createdAt: string;
-  backToMenu: string;
-  staff: boolean;
+  /** Tujuan setelah pembatalan succeeds: menu untuk pelanggan, board untuk kasir. */
+  cancelHref: string;
 }) {
   const router = useRouter();
   const [remaining, setRemaining] = useState(() => secondsLeft(createdAt));
@@ -257,14 +259,18 @@ function QrisBox({
   }
 
   /*
-   * Batal dari sisi kasir.
+   * Batal pembayaran.
    *
-   * `expireOrder` memanggil RPC `cancel_unpaid_order`, yang hanya mengubah
-   * pesanan yang MASIH pending. Kalau ternyata sudah dibayar, RPC mengembalikan
-   * false -- dan itu ditampilkan sebagai error, bukan diam-diam kembali ke
-   * kasir sambil pesanan tetap jalan.
+   * Sama untuk pelanggan dan kasir: membatalkan berarti membatalkan
+   * sungguhan lewat RPC cancel_unpaid_order, bukan cuma berpindah halaman.
+   * Kalau ternyata sudah dibayar, errornya ditampilkan -- bukan diam-diam
+   * kembali ke menu sambil pesanan tetap jalan.
+   *
+   * Hanya jadi berbeda di tujuan akhirnya:
+   *   pelanggan -> kembali ke /menu?table=XX
+   *   kasir     -> kembali ke board antrean
    */
-  function handleCancelByStaff() {
+  function handleCancelPayment() {
     setError(null);
     startTransition(async () => {
       const result = await expireOrder(orderId);
@@ -278,7 +284,7 @@ function QrisBox({
         return;
       }
 
-      router.push("/admin/kasir");
+      router.push(cancelHref);
     });
   }
 
@@ -357,59 +363,48 @@ function QrisBox({
         Sudah transfer? Klik tombol di atas untuk langsung dapat nomor antrean.
       </p>
 
-      {/*
-        Punya timer 15 menit yang tetap berjalan meski pelanggan pindah halaman.
-        Beri tahu supaya dia tahu harus balik lagi sebelum waktu habis --
-        kalau tidak, pesanan dibatalkan diam-diam dan pelanggan mengira
-        pesan-nya hilang.
-      */}
       <div className="space-y-2 border-t pt-4">
-        {staff ? (
-          /*
-            Kasir membatalkan berarti membatalkan pesanan sungguhan, bukan
-            cuma berpindah halaman. Pelanggan yang singgah ke halaman lain
-            masih boleh balik lagi sebelum timer habis; kasir yang salah
-            tekan tidak.
-          */
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full text-destructive hover:text-destructive"
-              disabled={isPending}
-              onClick={handleCancelByStaff}
-            >
-              {isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <XCircle className="mr-2 h-4 w-4" />
-              )}
-              Batal Pembayaran
-            </Button>
-            <p className="text-center text-[11px] text-muted-foreground">
-              Pesanan ini akan dibatalkan dan kasir kembali ke board antrean.
-            </p>
-          </>
-        ) : (
-          <>
-            <Button asChild variant="outline" className="w-full">
-              <Link href={backToMenu}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Kembali ke Menu
-              </Link>
-            </Button>
-            {/*
-              Punya timer 15 menit yang tetap berjalan meski pelanggan pindah
-              halaman. Beri tahu supaya dia tahu harus balik lagi sebelum waktu
-              habis -- kalau tidak, pesanan dibatalkan diam-diam dan pelanggan
-              mengira pesanannya hilang.
-            */}
-            <p className="text-center text-[11px] text-muted-foreground">
-              Pergi dulu boleh — pesanan ini tetap menunggu pembayaran sampai{" "}
-              {PAYMENT_WINDOW_MINUTES} menit lagi.
-            </p>
-          </>
-        )}
+        {/*
+          Satu tombol untuk pelanggan DAN kasir: "Batalkan Pembayaran".
+
+          Sebelumnya pelanggan hanya dapat "Kembali ke Menu" yang cuma
+          berpindah halaman tanpa menyentuh pesanan -- jadi pesanan unpaid
+          menggantung di board kasir sampai timer habis, dan pelanggan yang
+          salah tekan mengira pesanannya hilang. Sekarang membatalkan berarti
+          membatalkan sungguhan, untuk keduanya.
+
+          Yang berbeda cuma tujuan akhir (cancelHref): pelanggan balik ke
+          /menu?table=XX, kasir balik ke board antrean.
+        */}
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full text-destructive hover:text-destructive"
+          disabled={isPending}
+          onClick={handleCancelPayment}
+        >
+          {isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <XCircle className="mr-2 h-4 w-4" />
+          )}
+          Batalkan Pembayaran
+        </Button>
+
+        <p className="text-center text-[11px] text-muted-foreground">
+          Pesanan ini akan dibatalkan, bukan disimpan.
+        </p>
+
+        {/*
+          Punya timer 15 menit yang tetap berjalan meski pelanggan pindah
+          halaman. Beri tahu supaya dia tahu tidak WAJIB membatalkan sekarang
+          -- kalau tidak, pesanan dibatalkan diam-diam dan pelanggan mengira
+          pesanannya hilang.
+        */}
+        <p className="text-center text-[11px] text-muted-foreground">
+          Pergi dulu boleh — pesanan ini tetap menunggu pembayaran sampai{" "}
+          {PAYMENT_WINDOW_MINUTES} menit lagi.
+        </p>
       </div>
     </div>
   );
@@ -419,7 +414,14 @@ function QrisBox({
 /* KADU BATAS WAKTU                                                     */
 /* ------------------------------------------------------------------ */
 
-function ExpiredBox({ backToMenu, staff }: { backToMenu: string; staff: boolean }) {
+function ExpiredBox({
+  backHref,
+  backLabel,
+}: {
+  backHref: string;
+  /** Label tombol ikut tujuan: pelanggan ke menu, kasir ke board. */
+  backLabel: string;
+}) {
   return (
     <div className="space-y-4 rounded-xl border-2 border-destructive/30 bg-destructive/5 p-6 text-center">
       <AlertCircle className="mx-auto h-10 w-10 text-destructive" />
@@ -428,9 +430,9 @@ function ExpiredBox({ backToMenu, staff }: { backToMenu: string; staff: boolean 
         Batas waktu 15 menit untuk pembayaran sudah lewat, jadi pesanan ini otomatis dibatalkan.
       </p>
       <Button asChild variant="outline" className="w-full">
-        <Link href={backToMenu}>
+        <Link href={backHref}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Kembali ke Menu
+          {backLabel}
         </Link>
       </Button>
     </div>
