@@ -14,11 +14,14 @@ export function MenuCatalog({
   tableParam,
   /** Label kategori dibuat lebih besar dan rata tengah. Dipakai di /menu. */
   centerFilter = false,
+  /** Paksa tombol pesan muncul walau `tableParam` kosong. Dipakai di kasir. */
+  orderable,
 }: {
   items: MenuCardItem[];
   groups: CategoryFilterGroup[];
   tableParam: string | null;
   centerFilter?: boolean;
+  orderable?: boolean;
 }) {
   const [activeGroup, setActiveGroup] = useState<string>(ALL);
   const [activeChild, setActiveChild] = useState<string | null>(null);
@@ -72,7 +75,12 @@ export function MenuCatalog({
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {filteredItems.map((item) => (
-            <MenuCard key={item.id} item={item} tableParam={tableParam} />
+            <MenuCard
+              key={item.id}
+              item={item}
+              tableParam={tableParam}
+              orderable={orderable}
+            />
           ))}
         </div>
       )}

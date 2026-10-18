@@ -264,6 +264,7 @@ export function KasirBoard({
             items={menuItems}
             groups={categoryGroups}
             tableParam={null}
+            orderable
           />
 
           {/*

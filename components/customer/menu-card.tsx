@@ -29,29 +29,34 @@ const WRAP =
   "flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md";
 
 /**
- * Kartu katalog. Bentuknya ditentukan oleh ada-tidaknya `?table=`.
+ * Kartu katalog.
  *
- *  - Tanpa `?table=` (mis. /menu): hanya gambar + nama, dan tidak bisa
- *    diklik. Halaman ini untuk melihat-lihat saja.
- *  - Dengan `?table=` (mis. /menu?table=02): pelanggan sedang duduk di
- *    meja itu. Kartu bisa diklik ke detail, dan kustomisasi, jumlah,
- *    serta tombol keranjang muncul supaya pesan bisa langsung.
+ * `orderable` menentukan tombol pesan (Gula / Suhu / jumlah / keranjang).
+ * Kalau tidak diisi, ikut `tableParam` -- jadi di /menu cukup `?table=`
+ * yang menentukan.
  *
- * Tidak ada prop baru untuk ini -- `tableParam` sudah ada.
+ * Dipisah dari `tableParam` karena kasir butuh dua hal berbeda:
+ *   - /menu?table=02    tombol pesan + link ke detail
+ *   - kasir "Pesan Menu" tombol pesan saja, tanpa link. Kasir memesan behalf
+ *     pelanggan yang ada di depan counter, bukan seperti pelanggan yang
+ *     sedang memilih sendiri.
  */
 export function MenuCard({
   item,
   tableParam,
+  orderable,
 }: {
   item: MenuCardItem;
   tableParam: string | null;
+  orderable?: boolean;
 }) {
   const href = tableParam ? `/menu/${item.id}?table=${tableParam}` : null;
+  const canOrder = orderable ?? tableParam !== null;
 
   return (
     <div className={WRAP}>
       <MenuCardTop item={item} href={href} />
-      {tableParam && <MenuCardControls item={item} />}
+      {canOrder && <MenuCardControls item={item} />}
     </div>
   );
 }
