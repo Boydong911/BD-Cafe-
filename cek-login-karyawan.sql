@@ -7,6 +7,10 @@
 -- Dua akun yang dicoba: boykeren dan boytampan.
 -- GANTI 123456 di Bagian B dengan password yang benar-benar dipakai
 -- (6 angka itu).
+--
+-- Semua query di file ini sudah disesuaikan dengan kolom yang benar-benar
+-- ada: public.profiles hanya punya id, username, full_name, role,
+-- created_at. Email tidak ada di sana, jadi email diambil dari auth.users.
 -- =========================================================
 
 
@@ -14,10 +18,9 @@
 -- BAGIAN A: adakah baris di auth.identities untuk tiap akun?
 -- ---------------------------------------------------------
 -- Ini inti dugaan. Kolom jumlah_identity:
---   0  = BUKAN penyebab. Lanjut ke Bagian B.
---   >0 = penyebabnya ketemu. auth.identities kosong = GoTrue tidak
---         pernah diberi identitas untuk akun ini, jadi tidak bisa
---         memverifikasi password-nya.
+--   0  = dugaan terkonfirmasi. GoTrue tidak pernah diberi identitas
+--         untuk akun ini, jadi tidak bisa memverifikasi password-nya.
+--   >0 = dugaan salah. Lanjut ke Bagian B.
 select
   u.email                                            as email,
   p.username                                         as username,
@@ -41,6 +44,9 @@ order by u.created_at;
 -- GANTI 123456 dengan password yang dipakai.
 -- password_cocok = true  -> hash-nya benar, masalahnya di luar password.
 -- password_cocok = false -> hash-nya tidak cocok dengan yang diketik.
+--
+-- Kalau muncul error "function crypt does not exist", pgcrypto tidak
+-- terlihat dari search_path sesi ini. Abaikan bagian ini dan lanjut ke bagian C.
 select
   u.email,
   (u.encrypted_password = crypt('123456', u.encrypted_password)) as password_cocok
@@ -49,25 +55,38 @@ where u.email like '%@cafe.internal';
 
 
 -- ---------------------------------------------------------
--- BAGIAN C: apakah username yang diketik cocok dengan yang tersimpan?
+-- BAGIAN C: username yang tersimpan vs yang diketik
 -- ---------------------------------------------------------
 -- register_staff_account() menyimpan username dalam huruf KECIL.
--- Kalau diketik "Boykeren" (huruf besar), pencocokan gagal dan
--- gejalanya persis sama: "Username atau password salah".
-select username, email
-from public.profiles
-where username ilike '%boykeren%' or username ilike '%boytampan%';
+-- Form login tidak menormalize, jadi kalau diketik "Boykeren" dengan
+-- huruf besar, pencocokan gagal dan gejalanya PERSIS sama.
+--
+-- username_tersimpan semua huruf kecil = aman dari masalah ini.
+select
+  p.username                                         as username_tersimpan,
+  p.full_name                                        as nama,
+  p.role                                             as role,
+  u.email                                            as email,
+  (p.username = lower(btrim(p.username)))            as semua_huruf_kecil
+from public.profiles p
+left join auth.users u on u.id = p.id
+where p.username ilike '%boykeren%'
+   or p.username ilike '%boytampan%'
+   or p.username ilike '%boy%';
 
 
 -- ---------------------------------------------------------
 -- BAGIAN D: contoh identitas milik akun yang SUDAH bisa login
 -- ---------------------------------------------------------
--- Ini pola yang harus diikuti saat memperbaiki. Salin nilainya persis.
+-- to_jsonb() dipakai supaya query ini tidak mungkin gagal karena nama
+-- kolom auth.identities berbeda antar versi Supabase: dia membungkus
+-- seluruh baris apa adanya. Pola inilah yang harus disalin persis saat
+-- memperbaiki.
+--
+-- Expected baris paling sedikit 1: akun owner.
 select
-  i.provider,
-  i.provider_id,
-  i.identity_data,
-  u.email
+  u.email,
+  to_jsonb(i) as isi_baris_identitas
 from auth.identities i
 join auth.users u on u.id = i.user_id
 order by u.created_at
