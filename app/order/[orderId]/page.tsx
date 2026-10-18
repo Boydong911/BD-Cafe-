@@ -215,7 +215,12 @@ export default async function OrderPage({
       )}
 
       {/*
-        Jalan keluar untuk PELANGGAN.
+        Jalan keluar untuk PELANGGAN saja.
+
+        Kasir TIDAK melihat tombol ini. Owner minta dihapus untuk alur kasir:
+        dari counter, "Kembali ke Menu" cuma menambah satu langkah tak
+        berguna -- kasir sudah tahu letaknya di board, dan membuka katalog
+        bukan bagian dari tugasnya. Dua tombol di blok staff sudah cukup.
 
         Pelanggan yang antre di kasir tidak mungkin menatap layar terus --
         mereka mau lihat-lihat menu dulu kalau mau pesan lagi. Tombolnya
@@ -229,14 +234,16 @@ export default async function OrderPage({
         meja yang benar-benar dipakai pelanggan -- meskipun dia
         sebelumnya datang tanpa scan QR.
       */}
-      <div className="border-t pt-4">
-        <Button asChild variant="outline" className="w-full">
-          <Link href={menuHref(order.table_number)}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Kembali ke Menu
-          </Link>
-        </Button>
-      </div>
+      {!staff && (
+        <div className="border-t pt-4">
+          <Button asChild variant="outline" className="w-full">
+            <Link href={menuHref(order.table_number)}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Kembali ke Menu
+            </Link>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
