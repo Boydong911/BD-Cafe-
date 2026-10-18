@@ -4,6 +4,17 @@ import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   completeOrder,
   updateOrderStatus,
 } from "@/app/admin/kasir/actions";
@@ -138,7 +149,6 @@ export function OrderCard({
   }
 
   function handleCancel() {
-    if (!window.confirm(`Batalkan pesanan ${order.order_number}?`)) return;
     run(() => updateOrderStatus(order.id, "cancelled"));
   }
 
@@ -256,16 +266,41 @@ export function OrderCard({
           )}
 
           {CAN_CANCEL.includes(order.status) && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-destructive hover:text-destructive"
-              disabled={isPending}
-              onClick={handleCancel}
-            >
-              Batalkan
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  disabled={isPending}
+                >
+                  Batalkan
+                </Button>
+              </AlertDialogTrigger>
+
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Batalkan pesanan {order.order_number ?? "ini"}?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Pesanan <strong>{order.customer_name}</strong> akan dibatalkan
+                    dan hilang dari antrean. Nomor antrean{" "}
+                    {order.order_number ?? "-"} tidak dipakai lagi.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Tidak Jadi</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-white hover:bg-destructive/90"
+                    onClick={handleCancel}
+                  >
+                    Ya, Batalkan
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </div>
       </footer>
