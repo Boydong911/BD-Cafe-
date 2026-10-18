@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, hasStaffSession } from "@/lib/supabase/server";
 import type { CustomizationGroup } from "@/types/menu";
 import type { Json } from "@/types/database.types";
 
@@ -159,7 +159,23 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
     return { error: `Gagal menyimpan detail pesanan: ${itemsError.message}` };
   }
 
-  // Belum bayar -> arahkan ke halaman pembayaran (QRIS / Tunai).
-  // Nomor antrean dibuat setelah pembayaran terkonfirmasi.
+  /*
+   * Ke mana pesanan baru diarahkan.
+   *
+   * Pelanggan biasa selalu ke halaman pembayaran: QRIS untuk scan QR,
+   * halaman "Bayar di Kasir" untuk tunai.
+   *
+   * Kasir yang memesan lewat tab "Pesan Menu" tidak butuh halaman pembayaran
+   * untuk TUNAI: uangnya ada di tangan kasir, jadi dia yang menekan
+   * "Selesaikan" di board sekaligus mencatat pembayaran dan menyelesaikan
+   * pesanan. Melewati halaman QR berarti satu langkah yang tidak berguna.
+   *
+   * QRIS tetap lewat halaman pembayaran, karena di situ kasir menekan
+   * "Sudah Bayar" untuk mendapatkan nomor antrean.
+   */
+  if (payment_method === "cash" && (await hasStaffSession())) {
+    redirect(`/order/${order.id}`);
+  }
+
   redirect(`/order/${order.id}/pay`);
 }

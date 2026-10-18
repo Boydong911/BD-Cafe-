@@ -4,8 +4,7 @@ import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  completeQrisOrder,
-  confirmPayment,
+  completeOrder,
   updateOrderStatus,
 } from "@/app/admin/kasir/actions";
 import type { KasirOrder, OrderStatus } from "@/types/order";
@@ -31,21 +30,17 @@ const STATUS_CLASS: Record<OrderStatus, string> = {
 /*
  * Alur tombol setelah penyederhanaan (permintaan owner):
  *
- *   pending / confirmed / preparing  ->  [Konfirmasi Bayar]  ->  ready  (+ struk)
- *   ready                            ->  [Selesaikan]       ->  completed
+ *   pending / confirmed / preparing / ready  ->  [Selesaikan]  ->  completed
  *
- * Tombol "Terima Pesanan" dan "Mulai Dibuat" sudah dihapus, jadi tidak ada
- * lagi tabel transisi NEXT_STEP. Jumlah tombolnya tinggal bergantung pada status:
- *   - belum ready   -> "Konfirmasi Bayar" (tunai / QRIS), lalu struk
- *   - sudah ready   -> "Selesaikan"
+ * Dulu ada dua tombol: "Konfirmasi Bayar" lebih dulu, baru "Selesaikan".
+ * Owner meminta langkah pertama dihapus untuk TUNAI maupun QRIS, jadi
+ * kasir menekan sekali saja.
  *
- * PENTING soal tombol "Konfirmasi Bayar":
- *   Tombol ini sengaja TIDAK disembunyikan hanya karena sudah lunas. Untuk
- *   QRIS, customer menekan "Sudah Bayar" di halamannya sendiri, jadi pesanan
- *   sudah `paid` SEBELUM kasir menyentuhnya. Kalau tombolnya disembunyikan
- *   saat sudah lunas, kasir tidak punya cara lagi untuk mencetak struk.
- *   Yang menentukan adalah statusnya sudah `ready` atau `completed` — bukan
- *   status pembayarannya.
+ * Tombol "Terima Pesanan" dan "Mulai Dibuat" juga sudah dihapus dulu
+ * sebelumnya, jadi tidak ada lagi tabel transisi NEXT_STEP di sini.
+ *
+ * Yang tetap tidak boleh dihapus: "Batalkan" untuk status yang masih bisa
+ * dibatalkan, karena itu satu-satunya jalan keluar kalau pesanan salah input.
  */
 
 const CAN_CANCEL: OrderStatus[] = ["pending", "confirmed", "preparing"];
@@ -99,16 +94,12 @@ export function OrderCard({
   const isCancelled = order.status === "cancelled";
   const isDone = order.status === "completed";
 
-  // Sudah masuk status ready: tombol konfirmasi bayar tidak relevan lagi.
-  const isReadyToServe = order.status === "ready";
-
   /*
-   * Tombol aksi utama muncul selama pesanan belum selesai/dibatalkan.
-   * Untuk QRIS tombolnya bernama "Selesaikan" (bukan "Konfirmasi Bayar"),
-   * karena pembayarannya sudah dilakukan pelanggan.
+   * Satu tombol "Selesaikan" untuk TUNAI maupun QRIS, muncul selama pesanan
+   * belum selesai atau dibatalkan. Dulu ada "Konfirmasi Bayar" lebih dulu --
+   * owner meminta langkah itu dihapus.
    */
-  const canConfirmPayment =
-    !isCancelled && !isDone && !isReadyToServe;
+  const canComplete = !isCancelled && !isDone;
 
   function run(action: () => Promise<{ success: boolean; error?: string }>) {
     setError(null);
@@ -118,34 +109,30 @@ export function OrderCard({
     });
   }
 
-  /**
-   * Konfirmasi bayar (tunai ATAU QRIS) lalu langsung cetak struk.
+  /*
+   * Selesaikan: catat pembayaran kalau perlu, lalu selesaikan pesanan.
    *
-   * Struk dicetak otomatis sesuai permintaan owner, jadi kasir tidak perlu
-   * klik tombol cetak terpisah. Status "ready" sudah ikut diuruskan di
-   * server action confirmPayment().
-   *
-   * Metode pembayaran ikut dikirim supaya server bisa memilih jalur yang
-   * benar. Server tetap membacanya ulang dari database, jadi nilai di sini
-   * bukan sumber kebenaran -- hanya petunjuk.
+   * Struk ikut tercetak otomatis, seperti dulu saat tombolnya bernama
+   * "Konfirmasi Bayar". Dipakai data pesanan yang sudah ada di memory --
+   * tidak perlu fetch ulang, dan tetap benar walau `status` belum
+   * ter-refresh.
    */
-  function handleConfirmPayment() {
+  function handleComplete() {
     setError(null);
     startTransition(async () => {
-      const res = await confirmPayment(order.id, order.payment_method);
+      const res = await completeOrder(order.id);
 
       // Pakai operator `in` alih-alih `!res.success`: project ini `strict: false`
-      // dan tanpa strictNullChecks TypeScript tidak memerncetkan union ini.
+      // dan tanpa strictNullChecks TypeScript tidak mengenali union ini.
       if (!("success" in res && res.success)) {
-        setError(("error" in res && res.error) || "Gagal konfirmasi pembayaran.");
+        setError(("error" in res && res.error) || "Gagal menyelesaikan pesanan.");
         return;
       }
-      // Struk dicetak dengan data pesanan yang sudah ada di memory — tidak
-      // perlu fetch ulang, dan tetap benar walau `status` belum ter-refresh.
+
       onConfirmPayment?.({
         ...order,
         payment_status: "paid",
-        status: "ready",
+        status: "completed",
       });
     });
   }
@@ -248,46 +235,21 @@ export function OrderCard({
 
         <div className="flex flex-wrap gap-2">
           {/*
-            QRIS tidak punya tombol konfirmasi bayar. Pelanggan sudah menekan
-            "Sudah Bayar" di halamannya sendiri, jadi dari sisi kasir tidak ada
-            yang perlu dikonfirmasi -- hanya diselesaikan.
+            Satu tombol untuk kedua metode.
 
-            TUNAI tetap perlu: uang baru diterima di tangan kasir.
+            Dulu ada "Konfirmasi Bayar" dulu, baru "Selesaikan" setelahnya.
+            Owner minta langkah pertama dihapus: kasir menekan "Selesaikan"
+            sekali, dan itu sudah mencatat pembayaran (untuk tunai) sekaligus
+            menyelesaikan pesanan.
           */}
-          {canConfirmPayment && order.payment_method !== "qris" && (
+          {canComplete && (
             <Button
               type="button"
               variant="default"
               size="sm"
               className="flex-1"
               disabled={isPending}
-              onClick={handleConfirmPayment}
-            >
-              {isPending ? "Memproses..." : "Konfirmasi Bayar"}
-            </Button>
-          )}
-
-          {canConfirmPayment && order.payment_method === "qris" && (
-            <Button
-              type="button"
-              variant="default"
-              size="sm"
-              className="flex-1"
-              disabled={isPending}
-              onClick={() => run(() => completeQrisOrder(order.id))}
-            >
-              {isPending ? "Memproses..." : "Selesaikan"}
-            </Button>
-          )}
-
-          {/* Sudah siap Disajikan: tombol terakhir. */}
-          {isReadyToServe && (
-            <Button
-              type="button"
-              size="sm"
-              className="flex-1"
-              disabled={isPending}
-              onClick={() => run(() => updateOrderStatus(order.id, "completed"))}
+              onClick={handleComplete}
             >
               {isPending ? "Memproses..." : "Selesaikan"}
             </Button>

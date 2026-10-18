@@ -232,11 +232,14 @@ export async function confirmPayment(
 }
 
 /**
- * Selesaikan pesanan QRIS dalam satu klik.
+ * Selesaikan pesanan dalam satu klik, untuk TUNAI maupun QRIS.
  *
- * Owner minta langkah "Konfirmasi Bayar QRIS" dihilang dari alur kasir --
- * pesanan QRIS sudah dibayar oleh pelanggan, jadi kasir tidak perlu
- * mengonfirmasi apa-apa, hanya menyelesaikan.
+ * Owner minta langkah "Konfirmasi Bayar" dihapus dari alur kasir untuk kedua
+ * metode. Satu tombol "Selesaikan" yang melakukan semuanya:
+ *
+ *   TUNAI  -> catat pembayaran (RPC confirm_cash_payment, yang sekaligus
+ *             memberi nomor antrean) -> ready -> completed
+ *   QRIS   -> pembayaran sudah lunas dari sisi pelanggan -> ready -> completed
  *
  * Status tetap dikrok dua tahap (ready lalu completed), bukan langsung
  * completed, supaya pesanan sempat terlihat sebagai "Siap Disajikan" di
@@ -246,7 +249,7 @@ export async function confirmPayment(
  * Idempoten: aman ditekan dua kali. Kalau sudah `completed`, tidak ada yang
  * diubah dan tetap dianggap berhasil.
  */
-export async function completeQrisOrder(orderId: string): Promise<ActionResult> {
+export async function completeOrder(orderId: string): Promise<ActionResult> {
   if (!z.string().uuid().safeParse(orderId).success) {
     return { success: false, error: "Data tidak valid." };
   }
@@ -278,9 +281,38 @@ export async function completeQrisOrder(orderId: string): Promise<ActionResult> 
     return { success: true };
   }
 
-  // Penjaga: jangan sampai pesanan BELUM LUNAS bisa diselesaikan lewat
-  // jalan pintas ini.
-  if (cur.payment_status !== "paid") {
+  /*
+   * TUNAI: uang baru diterima di tangan kasir, jadi di sini pembayaran
+   * dicatat lewat RPC SECURITY DEFINER. RPC itu juga yang memberi nomor
+   * antrean, lewat trigger.
+   *
+   * QRIS: kalau ternyata belum lunas (customer belum menekan "Sudah Bayar"),
+   * TIDAK dipaksa jadi lunas. Jalur itu ditahan supaya pelanggan tidak
+   * dapat antrean gratis hanya karena menekan tombol.
+   */
+  if (cur.payment_method === "cash" && cur.payment_status !== "paid") {
+    const { data, error } = await supabase.rpc("confirm_cash_payment", {
+      p_order_id: orderId,
+    });
+
+    if (error) {
+      console.error(
+        "[kasir] completeOrder / confirm_cash_payment gagal:",
+        error.code,
+        error.message,
+        error.details,
+        error.hint
+      );
+      return { success: false, error: "Gagal mencatat pembayaran." };
+    }
+
+    if (data !== true) {
+      return {
+        success: false,
+        error: "Pesanan sudah dibayar atau sudah dibatalkan.",
+      };
+    }
+  } else if (cur.payment_status !== "paid") {
     return { success: false, error: "Pesanan belum lunas." };
   }
 
@@ -292,7 +324,7 @@ export async function completeQrisOrder(orderId: string): Promise<ActionResult> 
       .eq("id", orderId);
 
     if (readyError) {
-      console.error("[kasir] complete_qris_order (ready) gagal:", readyError.message);
+      console.error("[kasir] completeOrder (ready) gagal:", readyError.message);
       return { success: false, error: "Gagal menyiapkan pesanan." };
     }
   }
@@ -304,7 +336,7 @@ export async function completeQrisOrder(orderId: string): Promise<ActionResult> 
     .eq("id", orderId);
 
   if (doneError) {
-    console.error("[kasir] complete_qris_order (completed) gagal:", doneError.message);
+    console.error("[kasir] completeOrder (completed) gagal:", doneError.message);
     return { success: false, error: "Gagal menyelesaikan pesanan." };
   }
 

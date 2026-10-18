@@ -14,7 +14,10 @@ import { menuHref } from "@/lib/menu-href";
 
 type PaymentMethod = "qris" | "cash";
 
-export function CheckoutForm() {
+/** Tujuan tombol keluar untuk kasir: board antrean, bukan katalog. */
+const KASIR_HREF = "/admin/kasir";
+
+export function CheckoutForm({ staff = false }: { staff?: boolean }) {
   const { items, totalPrice, clearCart, addItem, session, setManualSession, setCustomerName } =
     useCart();
 
@@ -42,8 +45,13 @@ export function CheckoutForm() {
    *
    * Di halaman pesanan dan pembayaran, keranjang sudah kosong karena
    * pesanan sudah dibuat, jadi aman memakai nomor meja apa adanya.
+   *
+   * Untuk kasir tidak ada `?table=` sama sekali -- dia memesan dari counter,
+   * bukan dari meja. Jadi semua tombol keluar mengarah ke board kasir.
    */
-  const scannedTableHref = menuHref(session.isScanned ? session.tableNumber : null);
+  const scannedTableHref = staff
+    ? KASIR_HREF
+    : menuHref(session.isScanned ? session.tableNumber : null);
 
   if (items.length === 0) {
     return (
