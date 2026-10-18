@@ -129,20 +129,25 @@ export async function kasirLoginAction(
   redirect("/admin/kasir");
 }
 
+async function signOutThenRedirect(target: "/login" | "/login/kasir") {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect(target);
+}
+
 /**
- * Keluar dari sesi.
+ * Keluar dari sesi dari sidebar owner.
  *
- * Arahkan ke halaman login yang SESUAI dengan role-nya, bukan selalu ke
- * `/login` (halaman owner). Kasir yang keluar dari dashboard kasir akan
- * mendarat di `/login/kasir`, jadi tidak salah masuk ke halaman owner.
+ * Tujunya dibaca dari ROLE akun: kasir yang logout dari mana pun mendarat
+ * di /login/kasir, owner di /login.
  *
- * Role dibaca SEBELUM signOut — sesudah keluar, sesi sudah tidak ada dan
- * tidak ada cara tahu dia kasir atau owner.
+ * Role harus dibaca SEBELUM signOut -- sesudah keluar, sesi sudah tidak ada
+ * dan tidak ada cara tahu dia kasir atau owner.
  */
 export async function logoutAction() {
   const supabase = await createClient();
 
-  let target = "/login/kasir";
+  let target: "/login" | "/login/kasir" = "/login/kasir";
 
   const {
     data: { user },
@@ -158,6 +163,19 @@ export async function logoutAction() {
     if (profile?.role === "owner") target = "/login";
   }
 
-  await supabase.auth.signOut();
-  redirect(target);
+  return signOutThenRedirect(target);
+}
+
+/**
+ * Keluar dari sesi dari DASHBOARD KASIR.
+ *
+ * Selalu ke /login/kasir, apa pun role akun yang sedang dipakai.
+ *
+ * Kalau tujuannya ikut mengikuti role, hasilnya bergantung pada siapa yang
+ * menekan, bukan dari halaman mana. Owner yang sedang mencoba alur kasir
+ * memakai akun owner-nya, lalu keluar dari /admin/kasir dan mendarat di
+ * login owner -- padahal dia menekan tombol di halaman kasir.
+ */
+export async function kasirLogoutAction() {
+  return signOutThenRedirect("/login/kasir");
 }

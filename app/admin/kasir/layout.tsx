@@ -1,4 +1,4 @@
-import { logoutAction } from "@/app/login/actions";
+import { kasirLogoutAction } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
 
 export default function KasirLayout({
@@ -16,7 +16,12 @@ export default function KasirLayout({
             </p>
             <p className="text-xs opacity-80">Dashboard Kasir</p>
           </div>
-          <form action={logoutAction}>
+          {/*
+            kasirLogoutAction, bukan logoutAction yang biasa dipakai sidebar
+            owner: halaman ini untuk kasir, jadi keluar dari sini harus balik
+            ke /login/kasir -- apa pun role akun yang sedang dipakai.
+          */}
+          <form action={kasirLogoutAction}>
             {/*
               Warna ditulis eksplisit, bukan mengandalkan variant `secondary`.
 
