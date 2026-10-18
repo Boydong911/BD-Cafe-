@@ -33,7 +33,10 @@
 --     provider_id    user_id sebagai teks
 --     identity_data  sub, email, email_verified false, phone_verified
 --                    false
---     email          email akun
+--     email          DIHITUNG OTOMATIS dari identity_data, jadi tidak
+--                    boleh diisi manual. Memisinya sendiri menghasilkan:
+--                    ERROR 428C9 cannot insert a non-DEFAULT value into
+--                    column "email"
 --   created_at, updated_at, dan last_sign_in_at diisi now(), sama
 --   seperti baris owner. id memakai gen_random_uuid(), sesuai default
 --   kolomnya di database ini.
@@ -59,8 +62,7 @@ insert into auth.identities (
   provider,
   last_sign_in_at,
   created_at,
-  updated_at,
-  email
+  updated_at
 )
 select
   gen_random_uuid(),
@@ -75,8 +77,7 @@ select
   'email',
   now(),
   now(),
-  now(),
-  u.email
+  now()
 from auth.users u
 where u.email like '%@cafe.internal'
   and not exists (
@@ -172,8 +173,7 @@ begin
     provider,
     last_sign_in_at,
     created_at,
-    updated_at,
-    email
+    updated_at
   )
   values (
     gen_random_uuid(),
@@ -188,8 +188,7 @@ begin
     'email',
     now(),
     now(),
-    now(),
-    v_email
+    now()
   );
 
   -- 2b) Trigger Supabase Auth membuat baris di public.profiles otomatis
@@ -326,8 +325,7 @@ begin
     provider,
     last_sign_in_at,
     created_at,
-    updated_at,
-    email
+    updated_at
   )
   values (
     gen_random_uuid(),
@@ -342,8 +340,7 @@ begin
     'email',
     now(),
     now(),
-    now(),
-    v_email
+    now()
   );
 
   -- Role di-hardcode 'kasir' di sini. Kalau trigger auth sudah membuat
