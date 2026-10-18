@@ -266,15 +266,27 @@ export function KasirBoard({
             tableParam={null}
           />
 
-          <aside className="flex flex-col rounded-xl bg-primary p-4 text-primary-foreground">
+          {/*
+            Panel kanan menempel di layar (lg ke atas) supaya tombol
+            "Lanjut ke Checkout" selalu terjangkau tanpa menggulir balik ke
+            atas. Yang bergulir hanya daftar isinya.
+
+            `top-20` karena header kasir di app/admin/kasir/layout.tsx juga
+            sticky di atas dan setinggi sekitar 68px. Kalau top-nya lebih
+            kecil, panel ini akan ketutup header.
+
+            Di bawah lg panel ikut mengalir normal -- tidak sticky, karena
+            di situ sudah jadi satu kolom di bawah katalog.
+          */}
+          <aside className="flex flex-col rounded-xl bg-primary p-4 text-primary-foreground lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:self-start lg:overflow-hidden">
             <h2 className="font-serif text-lg">Keranjang</h2>
             <p className="mb-3 text-xs text-primary-foreground/60">
               {totalItems > 0 ? `${totalItems} item dipilih` : "Belum ada item"}
             </p>
 
-            <CartItemList className="flex-1 space-y-3 overflow-y-auto" />
+            <CartItemList className="min-h-0 flex-1 space-y-3 overflow-y-auto" />
 
-            <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
+            <div className="mt-4 shrink-0 space-y-3 border-t border-white/10 pt-4">
               <div className="flex items-center justify-between text-base font-semibold">
                 <span>Total</span>
                 <span>{formatPrice(totalPrice)}</span>
