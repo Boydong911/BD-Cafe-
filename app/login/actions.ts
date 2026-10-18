@@ -46,7 +46,15 @@ async function verifyCredentials(
   });
 
   if (rpcError || !email) {
-    // Pesan digeneralisir supaya tidak bocorkan apakah username ada atau tidak.
+    // Pesan ke pengguna digeneralisir supaya tidak bocorkan apakah username
+    // ada atau tidak. Detail sebenarnya hanya ditulis ke log server, karena
+    // "get_login_email tidak mengembalikan email" dan "RPC-nya error" adalah
+    // dua masalah yang sangat berbeda.
+    console.error("[login] get_login_email gagal:", {
+      username,
+      rpcError: rpcError?.message ?? null,
+      emailDitemukan: email ?? null,
+    });
     return { ok: false, error: "Username atau password salah." };
   }
 
@@ -56,6 +64,24 @@ async function verifyCredentials(
     await supabase.auth.signInWithPassword({ email, password });
 
   if (signInError || !signInData.user) {
+    /*
+     * GoTrue membalas dengan alasan yang sangat berbeda-beda, dan itu satu-
+     * satunya petunjuk yang benar-benar berguna. Contoh pesan yang pernah
+     * muncul:
+     *   Invalid login credentials  -> email tidak ketemu, atau hash tidak cocok
+     *   Email not confirmed        -> email_confirmed_at kosong
+     *
+     * Semua disamarkan jadi satu kalimat supaya tidak membocorkan apakah
+     * username itu ada. Detailnya ditulis ke log server saja, TIDAK pernah
+     * dikirim ke peramban.
+     */
+    console.error("[login] signInWithPassword gagal:", {
+      username,
+      email,
+      status: signInError?.status ?? null,
+      code: signInError?.code ?? null,
+      message: signInError?.message ?? null,
+    });
     return { ok: false, error: "Username atau password salah." };
   }
 
