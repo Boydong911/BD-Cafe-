@@ -79,7 +79,7 @@ export function KasirBoard({
   categoryGroups: CategoryFilterGroup[];
 }) {
   const router = useRouter();
-  const { totalItems, totalPrice } = useCart();
+  const { totalItems, totalPrice, clearScannedTable, hydrated } = useCart();
   const [tabKey, setTabKey] = useState<"pesan" | "alur">("alur");
   const [filterKey, setFilterKey] = useState("aktif");
   // Pesanan yang struknya sedang dicetak.
@@ -162,6 +162,32 @@ export function KasirBoard({
       supabase.removeChannel(channel);
     };
   }, [router]);
+
+  /*
+   * Buang sisa sesi meja hasil scan QR.
+   *
+   * Sesi keranjang disimpan di localStorage, jadi sesi "pelanggan di meja 1"
+   * dan "kasir di counter" berbagi tempat yang sama. Kalau perangkat ini
+   * pernah dibuka sebagai /menu?table=1, lalu kasir memakai tablet yang sama
+   * untuk order, sesi itu masih tertinggal -- form checkout lalu menampilkan
+   * "Dine In - Meja 1" dan menyembunyikan tombol Dine In / Take Away.
+   *
+   * Kasir memesan dari counter, jadi sesi meja tidak pernah relevan di sini.
+   * `clearScannedTable()` hanya menyentuh sesi: isi keranjang dan "Pesanan Atas
+   * Nama" tetap utuh.
+   *
+   * Menunggu `hydrated` supaya localStorage sempat dibaca dulu -- kalau tidak,
+   * efek ini berjalan sebelum sesi termuat dan session-nya dibersihkan
+   * tanpa gunanya.
+   */
+  useEffect(() => {
+    if (hydrated) clearScannedTable();
+    // clearScannedTable dibuat ulang tiap render CartProvider, jadi kalau
+    // ikut jadi dependensi efek ini akan terus jalan. Sifatnya idempoten
+    // (setelah pertama kali isScanned sudah false dan fungsi langsung
+    // return), jadi cukup dijalankan sekali saat hydrate selesai.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
 
   /*
    * Deteksi pesanan baru.
