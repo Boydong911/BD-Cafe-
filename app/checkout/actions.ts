@@ -166,14 +166,40 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
    * halaman "Bayar di Kasir" untuk tunai.
    *
    * Kasir yang memesan lewat tab "Pesan Menu" tidak butuh halaman pembayaran
-   * untuk TUNAI: uangnya ada di tangan kasir, jadi dia yang menekan
-   * "Selesaikan" di board sekaligus mencatat pembayaran dan menyelesaikan
-   * pesanan. Melewati halaman QR berarti satu langkah yang tidak berguna.
+   * untuk TUNAI: uangnya ada di tangan kasir, jadi dia yang mencatat
+   * pembayaran. Melewati halaman QR berarti satu langkah yang tidak berguna.
    *
    * QRIS tetap lewat halaman pembayaran, karena di situ kasir menekan
    * "Sudah Bayar" untuk mendapatkan nomor antrean.
    */
   if (payment_method === "cash" && (await hasStaffSession())) {
+    /*
+     * Catat pembayaran TUNAI sekalian.
+     *
+     * Panggil RPC yang sama dengan yang dipakai board kasir, bukan update
+     * langsung. Alasannya tiga:
+     *   1. RPC-nya SECURITY DEFINER, jadi tidak bergantung pada policy RLS
+     *      update tabel orders.
+     *   2. Update `payment_status` ke 'paid' itu yang memicu trigger
+     *      trg_orders_order_number -- itulah yang memberi NOMOR ANTREAN dan
+     *      menaikkan status dari pending ke confirmed.
+     *   3. Function ini hanya boleh dipanggil sesi owner/kasir -- persis
+     *      yang kita mau. Pelanggan tidak bisa menandai lunas sendiri
+     *      karena tidak punya sesi.
+     *
+     * Kalau gagal, pesanan TIDAK dihapus. Dia tetap muncul di board kasir
+     * dengan status "belum bayar", dan kasir bisa menekan "Selesaikan" di
+     * sana -- yang akan mencoba confirm_cash_payment lagi. Jadi kegagalan di
+     * sini bisa dipulihkan tanpa sisa pesanan nyangkut.
+     */
+    const { error: cashError } = await supabase.rpc("confirm_cash_payment", {
+      p_order_id: order.id,
+    });
+
+    if (cashError) {
+      console.error("[checkout] confirm_cash_payment gagal:", cashError.message);
+    }
+
     redirect(`/order/${order.id}`);
   }
 
