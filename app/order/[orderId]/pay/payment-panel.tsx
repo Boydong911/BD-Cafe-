@@ -5,6 +5,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { AlertCircle, ArrowLeft, CheckCircle2, Clock, Loader2, Store, XCircle } from "lucide-react";
 import { confirmQrisPayment, expireOrder } from "../actions";
 import { PAYMENT_WINDOW_MINUTES } from "@/lib/payment";
@@ -375,21 +386,45 @@ function QrisBox({
 
           Yang berbeda cuma tujuan akhir (cancelHref): pelanggan balik ke
           /menu?table=XX, kasir balik ke board antrean.
+
+          Pembatalan tidak bisa dibatalkan, jadi lewat modal konfirmasi dulu.
+          AlertDialog yang sama sudah dipakai kartu pesanan di board kasir,
+          jadi tidak ada komponen baru di sini.
         */}
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full text-destructive hover:text-destructive"
-          disabled={isPending}
-          onClick={handleCancelPayment}
-        >
-          {isPending ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <XCircle className="mr-2 h-4 w-4" />
-          )}
-          Batalkan Pembayaran
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full text-destructive hover:text-destructive"
+              disabled={isPending}
+            >
+              <XCircle className="mr-2 h-4 w-4" />
+              Batalkan Pembayaran
+            </Button>
+          </AlertDialogTrigger>
+
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Batalkan pembayaran?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Pesanan atas nama <strong>{customerName}</strong> akan
+                dibatalkan dan tidak bisa dilanjutkan. Kalau masih mau pesan,
+                tekan <strong>Tidak Jadi</strong> dulu. Pesanan ini tetap
+                menunggu pembayaran selama {PAYMENT_WINDOW_MINUTES} menit.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Tidak Jadi</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-white hover:bg-destructive/90"
+                onClick={handleCancelPayment}
+              >
+                Ya, Batalkan
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <p className="text-center text-[11px] text-muted-foreground">
           Pesanan ini akan dibatalkan, bukan disimpan.
