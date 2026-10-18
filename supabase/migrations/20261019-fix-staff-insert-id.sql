@@ -118,6 +118,21 @@ begin
        and full_name is null;
   end if;
 
+  -- Jaring pengaman role.
+  --
+  -- Fungsi ini tidak pernah menerima role dari pemanggil, jadi satu-satunya
+  -- cara baris di atas berakhir punya role selain kasir adalah trigger di
+  -- auth.users yang membuat baris profile dengan nilai yang salah. Repo ini
+  -- tidak punya trigger seperti itu, tapi database bisa saja berbeda dari
+  -- yang tertulis di sini, dan kalau begitu cabang update di atas hanya
+  -- menyentuh full_name, bukan role.
+  --
+  -- v_user_id adalah uuid yang baru dibuat di fungsi ini, jadi aman untuk
+  -- dipaksa tanpa syarat.
+  update public.profiles
+     set role = 'kasir'
+   where id = v_user_id;
+
   -- 2c) Catat jejak pendaftaran supaya owner bisa melihat siapa yang masuk.
   --     Source 'owner' karena dipanggil dari dashboard Karyawan.
   --     Fungsi log-nya dibuat di 20261017-lock-down-orders-rls.sql.
@@ -209,6 +224,21 @@ begin
     insert into public.profiles (id, username, full_name, role)
     values (v_user_id, v_clean, btrim(p_full_name), 'kasir');
   end if;
+
+  -- Jaring pengaman role.
+  --
+  -- Fungsi ini tidak pernah menerima role dari pemanggil, jadi satu-satunya
+  -- cara baris di atas berakhir punya role selain kasir adalah trigger di
+  -- auth.users yang membuat baris profile dengan nilai yang salah. Repo ini
+  -- tidak punya trigger seperti itu, tapi database bisa saja berbeda dari
+  -- yang tertulis di sini, dan kalau begitu cabang update di atas hanya
+  -- menyentuh full_name, bukan role.
+  --
+  -- v_user_id adalah uuid yang baru dibuat di fungsi ini, jadi aman untuk
+  -- dipaksa tanpa syarat.
+  update public.profiles
+     set role = 'kasir'
+   where id = v_user_id;
 
   -- Catat jejak pendaftaran. Source 'self_register' karena berasal dari
   -- halaman /daftar yang terbuka untuk umum — ini yang perlu diawasi owner.
