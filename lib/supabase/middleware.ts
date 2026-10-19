@@ -1,7 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import type { Seat } from "@/lib/supabase/seats";
+import { seatAuthOptions } from "@/lib/supabase/seats";
 
-export function createMiddlewareClient(request: NextRequest) {
+// Seat menentukan cookie mana yang dipakai (lihat lib/supabase/seats.ts).
+// Middleware menerima seat dari middleware.ts, yang memilihnya dari pathname.
+export function createMiddlewareClient(request: NextRequest, seat: Seat = "owner") {
   let response = NextResponse.next({
     request,
   })
@@ -24,6 +28,7 @@ export function createMiddlewareClient(request: NextRequest) {
           )
         },
       },
+      ...seatAuthOptions(seat),
     }
   )
 

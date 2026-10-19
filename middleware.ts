@@ -1,9 +1,30 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createMiddlewareClient } from "@/lib/supabase/middleware";
+import type { Seat } from "@/lib/supabase/seats";
+
+/*
+ * Pemilihan SEAT sesi untuk request ini (lihat lib/supabase/seats.ts):
+ *
+ *   /admin/owner/*, /login          -> owner  (cookie sesi "owner")
+ *   /admin/kasir/*, /login/kasir, /daftar -> kasir (cookie sesi "kasir")
+ *   sisanya (halaman pelanggan)     -> owner (default; halaman ini tidak
+ *   bergantung pada sesi, cookie hanya dibaca, tidak diubah kecuali refresh)
+ *
+ * Dengan pemecahan ini login/logout di dashboard owner tidak menyentuh
+ * sesi di halaman kasir, dan sebaliknya.
+ */
+function seatForPath(pathname: string): Seat {
+  if (pathname === "/login") return "owner";
+  if (pathname === "/login/kasir") return "kasir";
+  if (pathname === "/daftar") return "kasir";
+  if (pathname.startsWith("/admin/owner")) return "owner";
+  if (pathname.startsWith("/admin/kasir")) return "kasir";
+  return "owner";
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const { supabase, response } = createMiddlewareClient(request);
+  const { supabase, response } = createMiddlewareClient(request, seatForPath(pathname));
 
   // Wajib dipanggil supaya session ter-refresh (jangan dihapus).
   const {
@@ -40,10 +61,13 @@ export async function middleware(request: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    // User terautentikasi tapi bukan staff (tidak punya profile) -> tolak akses admin
+    // User terautentikasi tapi bukan staff (tidak punya profile) -> tolak akses admin.
+    // signOut LOCAL, bukan global: 'global' mencabut SEMUA refresh token milik
+    // user itu di semua seat/perangkat, sedangkan yang ingin dibersihkan di
+    // sini hanya sesi yang tampak di seat ini.
     if (!profile) {
       if (isAdminRoute) {
-        await supabase.auth.signOut();
+        await supabase.auth.signOut({ scope: "local" });
         return NextResponse.redirect(new URL("/login", request.url));
       }
       return response;

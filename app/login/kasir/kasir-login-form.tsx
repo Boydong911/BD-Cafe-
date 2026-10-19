@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, UserPlus, Store } from "lucide-react";
+import { AlertCircle, UserPlus, Store, ShieldAlert } from "lucide-react";
 
 const initialState: LoginState = {};
 
@@ -26,8 +26,12 @@ function SubmitButton() {
  *
  * Terpisah dari halaman owner supaya kasir tidak salah masuk ke halaman yang
  * salah. Setelah login, langsung mendarat di /admin/kasir.
+ *
+ * `notice` adalah peringatan yang muncul DI BAWAH KOLOM PASSWORD, di oper
+ * dari halaman yang memindahkan orang ke sini (mis. kasir yang mencoba
+ * login di halaman owner ditendang ke sini dengan notice "bukan-owner").
  */
-export default function KasirLoginForm() {
+export default function KasirLoginForm({ notice }: { notice?: string }) {
   const [state, formAction] = useActionState(kasirLoginAction, initialState);
 
   return (
@@ -62,6 +66,13 @@ export default function KasirLoginForm() {
                 required
               />
             </div>
+
+            {notice && (
+              <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
+                <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{notice}</span>
+              </div>
+            )}
 
             {state?.error && (
               <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">

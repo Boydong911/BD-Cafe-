@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import type { Seat } from "@/lib/supabase/seats";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username minimal 3 karakter"),
@@ -36,9 +37,10 @@ type VerifyResult = {
 
 async function verifyCredentials(
   username: string,
-  password: string
+  password: string,
+  seat: Seat = "owner"
 ): Promise<VerifyResult> {
-  const supabase = await createClient();
+  const supabase = await createClient(seat);
 
   // 1) Terjemahkan username -> email internal lewat RPC (SECURITY DEFINER).
   const { data: email, error: rpcError } = await supabase.rpc("get_login_email", {
@@ -46,13 +48,14 @@ async function verifyCredentials(
   });
 
   if (rpcError || !email) {
-    // Pesan ke pengguna digeneralisir supaya tidak bocorkan apakah username
-    // ada atau tidak. Detail sebenarnya hanya ditulis ke log server, karena
-    // "get_login_email tidak mengembalikan email" dan "RPC-nya error" adalah
-    // dua masalah yang sangat berbeda.
-    const detail = `DEBUG-1 rpc: ${rpcError?.message ?? "tidak ada error"} | email: ${email ?? "null"}`;
-    console.error("[login]", detail);
-    return { ok: false, error: detail };
+    /*
+     * Pesan ke pengguna digeneralisir supaya tidak bocorkan apakah username
+     * ada atau tidak. Detail sebenarnya hanya ditulis ke log server, karena
+     * "get_login_email tidak mengembalikan email" dan "RPC-nya error" adalah
+     * dua masalah yang sangat berbeda.
+     */
+    console.error("[login] RPC get_login_email gagal:", rpcError?.message ?? "tidak ada pesan", "| email:", email ?? "null");
+    return { ok: false, error: "Username atau password salah." };
   }
 
   // 2) Sign-in sesungguhnya ke Supabase Auth — password di-verifikasi
@@ -62,19 +65,21 @@ async function verifyCredentials(
 
   if (signInError || !signInData.user) {
     /*
-     * GoTrue membalas dengan alasan yang sangat berbeda-beda, dan itu satu-
-     * satunya petunjuk yang benar-benar berguna. Contoh pesan yang pernah
-     * muncul:
-     *   Invalid login credentials  -> email tidak ketemu, atau hash tidak cocok
+     * Semua alasan ditulis ke log server SEMENTARA respons yang dikirim ke
+     * peramban digeneralisir supaya tidak membocorkan apakah username itu
+     * ada. Pesan Auth yang paling berbeda-beda (contoh):
+     *   Invalid login credentials  -> email tidak ketemu / hash tidak cocok
      *   Email not confirmed        -> email_confirmed_at kosong
-     *
-     * Semua disamarkan jadi satu kalimat supaya tidak membocorkan apakah
-     * username itu ada. Detailnya ditulis ke log server saja, TIDAK pernah
-     * dikirim ke peramban.
+     *   Database error querying schema -> baris user gagal dibaca (kolom NULL)
      */
-    const detail = `DEBUG-2 auth: status=${signInError?.status ?? "-"} code=${signInError?.code ?? "-"} pesan=${signInError?.message ?? "-"} | email=${email} | adaUser=${Boolean(signInData?.user)}`;
-    console.error("[login]", detail);
-    return { ok: false, error: detail };
+    console.error(
+      "[login] Auth gagal:",
+      `status=${signInError?.status ?? "-"}`,
+      `code=${signInError?.code ?? "-"}`,
+      `pesan=${signInError?.message ?? "-"}`,
+      `| email=${email}`
+    );
+    return { ok: false, error: "Username atau password salah." };
   }
 
   // 3) Ambil role untuk menentukan halaman tujuan.
@@ -110,15 +115,29 @@ export async function ownerLoginAction(
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
   }
 
-  const result = await verifyCredentials(parsed.data.username, parsed.data.password);
+  const result = await verifyCredentials(parsed.data.username, parsed.data.password, "owner");
 
   if (!result.ok) {
     return { error: result.error ?? "Username atau password salah." };
   }
 
   if (result.role !== "owner") {
-    // Jangan sampai kasir diam-diam mendarat di halaman owner.
-    redirect("/login/kasir");
+    /*
+     * Jangan sampai kasir diam-diam mendarat di halaman owner.
+     *
+     * signInWithPassword di seat owner di atas MEMBUAT sesi untuk akun kasir
+     * itu (langkah verifikasi dan pembuatan sesi tak terpisahkan di sisi
+     * Supabase Auth). Sesi nyangkut di seat owner berbahaya: sebab akibatnya
+     * kasir membawa sesi kasir di area owner. Maka LEPAH sesi tersebut di
+     * sini (scope local = hanya seat ini), baru arahkan ke login kasir.
+     *
+     * `notice` dioper sebagai KODE (bukan teks mentah) supaya URL tidak bisa
+     * dipakai menampilkan kata-kata sembarangan; teksnya dipilih di
+     * app/login/kasir/page.tsx dari daftar whitelist.
+     */
+    const supabase = await createClient("owner");
+    await supabase.auth.signOut({ scope: "local" });
+    redirect("/login/kasir?notice=bukan-owner");
   }
 
   redirect("/admin/owner");
@@ -138,7 +157,13 @@ export async function kasirLoginAction(
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
   }
 
-  const result = await verifyCredentials(parsed.data.username, parsed.data.password);
+  /*
+   * Seat "kasir": sesinya menempel di cookie kasir, tidak mengganggu sesi
+   * dashboard owner. Owner YANG LURES BOLEH memakai login di sini (dia yang
+   * memilih membuka halaman kasir) — karena itu tidak ada pemeriksaan role
+   * di jalur ini; pembatasan area hanya di jalur /admin/owner.
+   */
+  const result = await verifyCredentials(parsed.data.username, parsed.data.password, "kasir");
 
   if (!result.ok) {
     return { error: result.error ?? "Username atau password salah." };
@@ -147,53 +172,37 @@ export async function kasirLoginAction(
   redirect("/admin/kasir");
 }
 
-async function signOutThenRedirect(target: "/login" | "/login/kasir") {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+async function signOutThenRedirect(target: "/login" | "/login/kasir", seat: Seat) {
+  const supabase = await createClient(seat);
+  /*
+   * scope "local": hanya sesi di seat INI yang dicabut -- sesi milik seat
+   * lain (dashboard sebelah) tetap hidup. Nilai default supabase-js adalah
+   * "global", yang mencabut SEMUA sesi user itu dan akan melogout dashboard
+   * lain di peramban yang sama.
+   */
+  await supabase.auth.signOut({ scope: "local" });
   redirect(target);
 }
 
 /**
  * Keluar dari sesi dari sidebar owner.
  *
- * Tujunya dibaca dari ROLE akun: kasir yang logout dari mana pun mendarat
- * di /login/kasir, owner di /login.
- *
- * Role harus dibaca SEBELUM signOut -- sesudah keluar, sesi sudah tidak ada
- * dan tidak ada cara tahu dia kasir atau owner.
+ * Seat sudah pasti "owner" — tombol ini hanya ada di halaman dashboard
+ * owner, dan /admin/owner hanya bisa dibuka dengan sesi seat owner. Jadi
+ * tidak perlu membaca role dulu seperti dulu (waktu keduanya berbagi satu
+ * cookie): sign out seat owner, lalu ke /login.
  */
 export async function logoutAction() {
-  const supabase = await createClient();
-
-  let target: "/login" | "/login/kasir" = "/login/kasir";
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profile?.role === "owner") target = "/login";
-  }
-
-  return signOutThenRedirect(target);
+  return signOutThenRedirect("/login", "owner");
 }
 
 /**
  * Keluar dari sesi dari DASHBOARD KASIR.
  *
- * Selalu ke /login/kasir, apa pun role akun yang sedang dipakai.
- *
- * Kalau tujuannya ikut mengikuti role, hasilnya bergantung pada siapa yang
- * menekan, bukan dari halaman mana. Owner yang sedang mencoba alur kasir
- * memakai akun owner-nya, lalu keluar dari /admin/kasir dan mendarat di
- * login owner -- padahal dia menekan tombol di halaman kasir.
+ * Seat "kasir": sesi yang dilepah hanya cookie kasir. Sesi dashboard owner
+ * di seat lain tidak tersentuh — itulah tujuan pemisahan seat: kasir boleh
+ * keluar/masuk tanpa mengganggu owner di peramban yang sama.
  */
 export async function kasirLogoutAction() {
-  return signOutThenRedirect("/login/kasir");
+  return signOutThenRedirect("/login/kasir", "kasir");
 }

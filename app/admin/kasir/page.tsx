@@ -29,7 +29,10 @@ export const metadata: Metadata = {
  */
 
 export default async function KasirPage() {
-  const supabase = await createClient();
+  // Seat kasir: board harus membaca sesi dari cookie kasir. Bila masih
+  // memakai cookie default, sesi yang terbaca adalah milik dashboard owner
+  // (atau tidak ada) dan data board jadi salah.
+  const supabase = await createClient("kasir");
 
   const now = new Date();
 

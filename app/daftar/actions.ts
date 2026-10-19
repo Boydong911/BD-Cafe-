@@ -61,7 +61,7 @@ export async function daftarAction(
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
   }
 
-  const supabase = await createClient();
+  const supabase = await createClient("kasir");
 
   // Pakai register_staff_account(), bukan create_staff_account(). Yang latter
   // hanya bisa dipanggil owner; ini halaman publik, jadi pakai function
@@ -77,8 +77,10 @@ export async function daftarAction(
   }
 
   // Akun langsung dipakai: sign-in di sini supaya kasir tidak perlu mengetik
-  // ulang username & password yang baru saja dibuat.
-  const login = await loginWithPassword(parsed.data.username, parsed.data.password);
+  // ulang username & password yang baru saja dibuat. Sesi menempel di cookie
+  // seat kasir -- tidak memengaruhi sesi dashboard owner di peramban yang
+  // sama.
+  const login = await loginWithPassword(parsed.data.username, parsed.data.password, "kasir");
   if (!login.ok) {
     return {
       success: `Akun ${parsed.data.username} berhasil dibuat. Silakan masuk dengan username & password tadi.`,

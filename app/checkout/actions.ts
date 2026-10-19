@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { redirect } from "next/navigation";
-import { createClient, hasStaffSession } from "@/lib/supabase/server";
+import { createClient, createActiveStaffClient, hasStaffSession } from "@/lib/supabase/server";
 import type { CustomizationGroup } from "@/types/menu";
 import type { Json } from "@/types/database.types";
 
@@ -55,7 +55,10 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
     return { error: "Nomor meja wajib diisi untuk dine-in." };
   }
 
-  const supabase = await createClient();
+  // Seat mengikuti siapa yang memesan: kasir dari board (seat kasir), owner
+  // yang mencoba alur (seat owner), atau pelanggan anonim (tidak ada sesi,
+  // insert tetap terbuka via RLS). createActiveStaffClient yang memilih.
+  const supabase = await createActiveStaffClient();
 
   // Ambil data menu terbaru dari DB (jangan percaya harga dari client!)
   const menuIds = items.map((i) => i.menu_item_id);

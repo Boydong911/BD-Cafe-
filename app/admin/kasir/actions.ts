@@ -48,7 +48,7 @@ const statusSchema = z.object({
 });
 
 async function assertStaff() {
-  const supabase = await createClient();
+  const supabase = await createClient("kasir");
   const { data: isStaff } = await supabase.rpc("is_staff");
   if (!isStaff) return { supabase, ok: false as const };
   return { supabase, ok: true as const };

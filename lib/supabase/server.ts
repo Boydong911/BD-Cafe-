@@ -1,13 +1,23 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database.types";
+import type { Seat } from "@/lib/supabase/seats";
+import { seatAuthOptions } from "@/lib/supabase/seats";
 
 /**
  * Dipakai di Server Component, Server Action, dan Route Handler.
  * Wajib dipanggil ulang di setiap request (bukan singleton) karena
  * bergantung pada cookies() request yang sedang berjalan.
+ *
+ * `seat` memilih cookie mana yang dipakai (lihat lib/supabase/seats.ts):
+ *   "owner" (default) -> dashboard owner, login owner, halaman publik
+ *   "kasir"           -> dashboard kasir, login kasir, /daftar
+ *
+ * Dua seat = dua cookie = dua sesi berjalan di satu peramban. Halaman
+ * kasir yang dikunjungi wajib pakai seat kasir, kalau tidak data-nya akan
+ * terbaca dari sesi owner (atau kosong) dan board kasir kacau.
  */
-export async function createClient() {
+export async function createClient(seat: Seat = "owner") {
   const cookieStore = await cookies();
 
   return createServerClient<Database>(
@@ -29,12 +39,14 @@ export async function createClient() {
           }
         },
       },
+      ...seatAuthOptions(seat),
     }
   );
 }
 
 /**
- * True kalau request ini datang dari sesi yang sudah login (kasir/owner).
+ * True kalau request ini datang dari sesi staff yang sedang login, di seat
+ * mana pun (owner atau kasir).
  *
  * ⚠️ INI BUKAN GERBANG KEAMANAN. Fungsinya hanya memilih tombol mana yang
  * ditampilkan, misalnya "Cetak Struk" atau "Batal Pembayaran" di halaman
@@ -44,9 +56,41 @@ export async function createClient() {
  * Pakai `getSession()` yang membaca cookie, bukan `getUser()` yang memvalidasi
  * JWT ke server auth. Untuk keputusan tampilan itu cukup, dan tidak menambah
  * satu round-trip ke setiap halaman pesanan.
+ *
+ * Kedua seat dicek karena flow ini dipakai dua jenis pengunjung: kasir yang
+ * memesan dari dashboard (sesinya di seat kasir) dan owner yang mencoba
+ * alur pelanggan dari dashboard owner (sesinya di seat owner).
  */
 export async function hasStaffSession(): Promise<boolean> {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getSession();
-  return data.session !== null;
+  const owner = await createClient("owner");
+  const { data: ownerSession } = await owner.auth.getSession();
+  if (ownerSession.session !== null) return true;
+
+  const kasir = await createClient("kasir");
+  const { data: kasirSession } = await kasir.auth.getSession();
+  return kasirSession.session !== null;
+}
+
+/**
+ * Client untuk aksi yang berlaku "di luar dashboard": membuat pesanan dari
+ * halaman/checkout pelanggan. Seat-nya dinilai dari sesi yang AKTIF:
+ *
+ *   - Sesi owner ada -> seat owner (owner mencoba alur pelanggan dari
+ *     dashboard, jadi insert/RPC berjalan dengan JWT owner-nya, sama seperti
+ *     perilaku sebelum seat dipisah).
+ *   - Sesi kasir ada -> seat kasir (kasir memesan lewat tab "Pesan Menu").
+ *   - Tidak ada sesi -> seat kasir, yang diambil sebagai ANON; policy RLS
+ *     insert untuk orders/order_items memang terbuka (`with check (true)`),
+ *     jadi pelanggan biasa tetap bisa memesan.
+ *
+ * Fungsi ini TIDAK pernah dipakai untuk aksi yang butuh role tertentu —
+ * yang semacam itu selalu lewat RPC SECURITY DEFINER yang mengecek
+ * is_staff() dari JWT sesi yang dipakai.
+ */
+export async function createActiveStaffClient() {
+  const owner = await createClient("owner");
+  const { data: ownerSession } = await owner.auth.getSession();
+  if (ownerSession.session !== null) return owner;
+
+  return await createClient("kasir");
 }

@@ -125,7 +125,8 @@ export function KasirBoard({
    * menunggu di kasir tanpa kabar.
    */
   useEffect(() => {
-    const supabase = createClient();
+    // Seat kasir: JWT yang dipakai realtime & polling harus milik sesi kasir.
+    const supabase = createClient("kasir");
     let debounce: ReturnType<typeof setTimeout> | undefined;
 
     const refresh = () => {
