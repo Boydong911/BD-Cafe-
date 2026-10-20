@@ -16,6 +16,12 @@
 -- Cara aman: jalankan SEMUANYA sekaligus, lalu tunggu. Bila muncul
 -- error, BERHENTI (jangan lanjut) dan catat pesan errornya.
 -- Setelah selesai, jalankan 01-cek-kesehatan.sql untuk memastikan.
+--
+-- Catatan (20 Okt 2026): file ini DIBEKUKAN. Perubahan SETELAH tanggal
+-- ini tidak ditambahkan ke sini, melainkan sebagai file baru di
+-- supabase/migrations/ (aturan di 00-PROSEDUR.md bagian 4). Membangun
+-- database baru dari nol = tempel file ini dulu, lalu jalankan
+-- file-file migrations yang bertanggal sesudah 20 Okt, urut nama.
 -- ============================================================================
 
 -- ============================================================================

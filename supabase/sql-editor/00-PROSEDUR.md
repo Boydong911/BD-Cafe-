@@ -3,6 +3,10 @@
 Folder ini adalah **satu-satunya pintu** untuk semua pekerjaan database:
 Database (tabel, index, fungsi), Auth (akun, login), dan Keamanan (RLS, policy).
 
+Perubahan database ke depan ditulis sebagai file baru di `supabase/migrations/`
+(aturannya di bagian 4). Folder ini menyimpan: prosedur, diagnosa, dan
+skema dasar beku 20 Okt 2026.
+
 Server aplikasi Next.js **tidak pernah diutak-atik** untuk urusan database —
 semua perubahan database ditempel langsung di Supabase Dashboard → **SQL Editor**.
 
@@ -13,8 +17,8 @@ semua perubahan database ditempel langsung di Supabase Dashboard → **SQL Edito
 | File | Buat apa | Kapan boleh jalan |
 |---|---|---|
 | `01-cek-kesehatan.sql` | Semua diagnosa (dashboard, akun, login 500). Seluruhnya `SELECT`, tidak mengubah apa pun | **Kapan saja** (bisa dijalankan berulang, 100% aman) |
-| `02-install-database-baru.sql` | Perintah SKEMA lengkap: gabungan 17 file asli (schema + storage + 15 migrasi) dalam urutan pemasangan | **HANYA database baru yang kosong**. Di database yang sudah berjalan: TIDAK BOLEH |
-| `_perbaikan-*.sql` | Satu perbaikan = satu file baru, dibuat saat perlu (lihat bagian 4) | Sesuai isi perbaikannya |
+| `02-install-database-baru.sql` | Perintah SKEMA lengkap: gabungan 17 file asli (schema + storage + 15 migrasi) dalam urutan pemasangan. Isinya DIBEKUKAN pada 20 Okt 2026 | **HANYA database baru yang kosong** — setelahnya lanjut file `../migrations/` bertanggal sesudah 20 Okt, urut nama. Di database yang sudah berjalan: TIDAK BOLEH |
+| `../migrations/2026MMDD-*.sql` | Perubahan database berikutnya: satu perubahan = satu file di `supabase/migrations/` (lihat bagian 4) | Sesuai isinya — biasanya sekali jalan, tidak diulang |
 
 ---
 
@@ -76,17 +80,34 @@ Langkah di SQL Editor:
 
 ---
 
-## 4. Menambah perbaikan baru
+## 4. Menambah perbaikan / perubahan database
 
-Satu masalah = satu file, penamaan: `_perbaikan-03-<nama>.sql`
-(atau sesuaikan nomor urut). Tulis baris pertama di file:
+Satu perubahan = satu file BARU di `supabase/migrations/` — pola yang
+dipakai 15-19 Okt. Penamaan: `20261021-<nama>.sql` (tanggal dulu, supaya
+urutan nama file = urutan pemasangan). Komentar atas di file itu mencatat:
+
 1. Gejala apa yang dilihat.
-2. Apa perbaikannya dan seberapa luas (tabel mana, baris mana).
-3. Rollback: keadaan "sebelum perbaikan" dicatat dalam komentar bila penting.
+2. Isi perbaikan dan seberapa luas (tabel mana, baris mana).
+3. Rollback bila penting: keadaan "sebelum perbaikan".
 
-Idempoten = aman dijalankan dua kali: bila perbaikan menulis
-`update ... set x = ...`, tambahkan filter `where ... is null` (atau
-kondisi lain) sehingga dieksekusi ulang pun hasilnya sama.
+Lalu jalankan file itu lewat prosedur bagian 2, dan jangan lupa commit.
+
+Tiga tali pengaman supaya aman:
+
+- File yang SUDAH dijalankan di database JANGAN diedit isinya (salah
+  tulis? buat file baru berikutnya yang memperbaiki, bukan menyulap
+  file lampau).
+- Idempoten = aman dijalankan dua kali: bila perbaikan menulis
+  `update ... set x = ...`, tambahkan `where ... is null` (atau kondisi
+  lain) sehingga dieksekusi ulang pun hasilnya sama.
+- Rollback = file terpisah (`20261021-rollback-<nama>.sql`). Ingat:
+  rollback ke versi lampau di database yang sudah berubah bisa memasang
+  ulang bug yang dulu sudah dibeneri (persis kasus 19 Okt).
+
+`02-install-database-baru.sql` TIDAK di-update setiap ada perubahan —
+isinya dibekukan per 20 Okt 2026. Membangun database baru dari nol =
+tempel file itu dulu, lalu jalankan file-file `../migrations/` yang
+bertanggal sesudah 20 Okt, urut nama file.
 
 ---
 
