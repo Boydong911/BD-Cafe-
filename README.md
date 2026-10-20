@@ -13,9 +13,17 @@ Lalu copy-kan semua file di paket ini ke dalam project (`app/`, `lib/`, `middlew
 
 ## 2. Setup Supabase
 1. Buat project baru di https://supabase.com.
-2. Buka **SQL Editor**, jalankan `supabase/schema.sql`, lalu `supabase/storage-policies.sql`.
-3. Copy `.env.local.example` -> `.env.local`, isi dengan URL & anon key project (Settings > API).
-   Untuk `SUPABASE_SERVICE_ROLE_KEY`, ambil dari halaman yang sama (JANGAN pernah commit / expose ke client).
+2. Buka **SQL Editor**, jalankan `supabase/sql-editor/02-install-database-baru.sql`
+   — satu tempel, berisi skema + policies + seluruh migrasi dalam urutan
+   pemasangannya. Prosedur rinci dan aturan amannya ada di
+   `supabase/sql-editor/00-PROSEDUR.md`; hasil instal dicek dengan
+   `supabase/sql-editor/01-cek-kesehatan.sql`.
+3. Buat `.env.local` berisi dua baris berikut (dari Settings > API):
+   - `NEXT_PUBLIC_SUPABASE_URL=...` (URL project)
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY=...` (publik, aman untuk client)
+   `SUPABASE_SERVICE_ROLE_KEY` hanya perlu diisi bila menjalankan
+   `scripts/seed-owner.ts` (membuat owner awal via Admin API).
+   JANGAN pernah commit / expose key ini ke client.
 
 ## 3. Buat akun Owner awal 
 ```bash
@@ -46,8 +54,9 @@ npm run dev
 - `app/checkout/actions.ts` — Server Action checkout: validasi ulang harga & stok
   dari database (tidak percaya harga dari client), insert `orders` + `order_items`.
 - `app/order/[orderId]/` — bukti pesanan + status realtime via `supabase-js` Realtime.
-- `supabase/schema.sql` — semua tabel, RLS, dan function laporan
-  (`get_sales_report`, `get_top_menu`) untuk Dashboard Owner (Recharts).
+- `supabase/sql-editor/` — prosedur menjalankan SQL, file cek kesehatan,
+  dan install database baru (tabel, RLS, function laporan
+  `get_sales_report` / `get_top_menu`).
 
 ## Yang masih perlu kamu lengkapi
 - Komponen UI: landing page (hero, galeri, maps), katalog menu + filter/search,
