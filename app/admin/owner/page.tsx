@@ -10,7 +10,7 @@ import {
   Clock,
   CheckCircle2,
 } from "lucide-react";
-import { SalesChart } from "@/components/admin/sales-chart";
+import { SalesChart } from "@/components/admin/sales-chart-lazy";
 import { StatCard } from "@/components/admin/stat-card";
 import { TopMenuList } from "@/components/admin/top-menu-list";
 import { RegistrationBanner } from "@/components/admin/registration-banner";

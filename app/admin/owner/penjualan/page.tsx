@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Wallet, Receipt, PiggyBank, ShoppingBag, Clock, CheckCircle2 } from "lucide-react";
-import { SalesChart } from "@/components/admin/sales-chart";
+import { SalesChart } from "@/components/admin/sales-chart-lazy";
 import { SalesFilter } from "@/components/admin/sales-filter";
 import { StatCard } from "@/components/admin/stat-card";
 import { TopMenuList } from "@/components/admin/top-menu-list";
