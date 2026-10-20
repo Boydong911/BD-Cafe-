@@ -52,6 +52,7 @@ export type Database = {
           image_url: string | null
           is_available: boolean
           name: string
+          outlet_id: string
           price: number
           updated_at: string
         }
@@ -65,6 +66,7 @@ export type Database = {
           image_url?: string | null
           is_available?: boolean
           name: string
+          outlet_id?: string
           price: number
           updated_at?: string
         }
@@ -78,6 +80,7 @@ export type Database = {
           image_url?: string | null
           is_available?: boolean
           name?: string
+          outlet_id?: string
           price?: number
           updated_at?: string
         }
@@ -87,6 +90,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_items_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
             referencedColumns: ["id"]
           },
         ]
@@ -153,6 +163,7 @@ export type Database = {
           notes: string | null
           order_number: string | null
           order_type: Database["public"]["Enums"]["order_type"]
+          outlet_id: string
           payment_method: Database["public"]["Enums"]["payment_method"]
           payment_status: Database["public"]["Enums"]["payment_status"]
           status: Database["public"]["Enums"]["order_status"]
@@ -168,6 +179,7 @@ export type Database = {
           notes?: string | null
           order_number?: string | null
           order_type: Database["public"]["Enums"]["order_type"]
+          outlet_id?: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           payment_status?: Database["public"]["Enums"]["payment_status"]
           status?: Database["public"]["Enums"]["order_status"]
@@ -183,6 +195,7 @@ export type Database = {
           notes?: string | null
           order_number?: string | null
           order_type?: Database["public"]["Enums"]["order_type"]
+          outlet_id?: string
           payment_method?: Database["public"]["Enums"]["payment_method"]
           payment_status?: Database["public"]["Enums"]["payment_status"]
           status?: Database["public"]["Enums"]["order_status"]
@@ -191,7 +204,15 @@ export type Database = {
           total?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       staff_registration_reads: {
         Row: {
@@ -213,6 +234,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          outlet_id: string | null
           source: string
           staff_id: string | null
           username: string
@@ -221,6 +243,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          outlet_id?: string | null
           source?: string
           staff_id?: string | null
           username: string
@@ -229,17 +252,27 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          outlet_id?: string | null
           source?: string
           staff_id?: string | null
           username?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "staff_registration_log_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
           created_at: string
           full_name: string | null
           id: string
+          outlet_id: string | null
           role: Database["public"]["Enums"]["user_role"]
           username: string
         }
@@ -247,6 +280,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          outlet_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           username: string
         }
@@ -254,8 +288,50 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          outlet_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outlets: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          is_pusat: boolean
+          menu_mode: string
+          nama: string
+          slug: string
+          tanggal_bangun: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_pusat?: boolean
+          menu_mode?: string
+          nama: string
+          slug: string
+          tanggal_bangun?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_pusat?: boolean
+          menu_mode?: string
+          nama?: string
+          slug?: string
+          tanggal_bangun?: string | null
         }
         Relationships: []
       }
@@ -265,6 +341,7 @@ export type Database = {
           id: string
           is_active: boolean
           label: string | null
+          outlet_id: string
           table_number: string
         }
         Insert: {
@@ -272,6 +349,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           label?: string | null
+          outlet_id: string
           table_number: string
         }
         Update: {
@@ -279,9 +357,18 @@ export type Database = {
           id?: string
           is_active?: boolean
           label?: string | null
+          outlet_id?: string
           table_number?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tables_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -293,7 +380,7 @@ export type Database = {
       confirm_cash_payment: { Args: { p_order_id: string }; Returns: boolean }
       get_login_email: { Args: { p_username: string }; Returns: string }
       get_sales_report: {
-        Args: { p_end: string; p_period: string; p_start: string }
+        Args: { p_end: string; p_outlet_id?: string; p_period: string; p_start: string }
         Returns: {
           bucket: string
           cost: number
@@ -303,7 +390,7 @@ export type Database = {
         }[]
       }
       get_top_menu: {
-        Args: { p_end: string; p_limit?: number; p_start: string }
+        Args: { p_end: string; p_limit?: number; p_outlet_id?: string; p_start: string }
         Returns: {
           menu_item_id: string
           menu_name: string
@@ -319,6 +406,8 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          outlet_id: string | null
+          outlet_nama: string | null
           role: Database["public"]["Enums"]["user_role"]
           username: string
         }[]
@@ -326,6 +415,7 @@ export type Database = {
       create_staff_account: {
         Args: {
           p_full_name?: string
+          p_outlet_id: string
           p_password: string
           p_username: string
         }
@@ -334,6 +424,7 @@ export type Database = {
       register_staff_account: {
         Args: {
           p_full_name: string
+          p_outlet_id?: string
           p_password: string
           p_username: string
         }
@@ -400,6 +491,10 @@ export type Database = {
         }[]
       }
       mark_registrations_seen: { Args: { p_staff_id: string }; Returns: undefined }
+      move_staff_account: {
+        Args: { p_outlet_id: string; p_staff_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       order_status:

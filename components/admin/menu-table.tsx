@@ -38,9 +38,12 @@ import type { MenuItemRow } from "@/types/menu";
 export function MenuTable({
   items,
   groups,
+  outletSlug,
 }: {
   items: MenuItemRow[];
   groups: CategoryFilterGroup[];
+  /** Slug outlet yang sedang dilihat, supaya link Edit kembali ke daftar outlet yang sama. */
+  outletSlug?: string;
 }) {
   const [rows, setRows] = useState(items);
   const [activeGroup, setActiveGroup] = useState<string>(ALL);
@@ -182,7 +185,13 @@ export function MenuTable({
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
                     <Button asChild size="icon" variant="ghost" className="h-8 w-8">
-                      <Link href={`/admin/owner/menu/${item.id}/edit`}>
+                      <Link
+                        href={
+                          outletSlug
+                            ? `/admin/owner/menu/${item.id}/edit?outlet=${outletSlug}`
+                            : `/admin/owner/menu/${item.id}/edit`
+                        }
+                      >
                         <Pencil className="h-4 w-4" />
                       </Link>
                     </Button>

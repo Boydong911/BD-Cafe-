@@ -14,7 +14,9 @@ import type { SalesRow, SalesSummary, TopMenuRow } from "@/types/sales";
 export async function fetchSalesReport(
   period: ReportPeriod,
   start: Date,
-  end: Date
+  end: Date,
+  /** `null` / tidak diisi = semua outlet. */
+  outletId?: string | null
 ): Promise<SalesRow[]> {
   const supabase = await createClient();
 
@@ -22,6 +24,7 @@ export async function fetchSalesReport(
     p_period: period,
     p_start: start.toISOString(),
     p_end: end.toISOString(),
+    ...(outletId ? { p_outlet_id: outletId } : {}),
   });
 
   if (error) {
@@ -35,7 +38,9 @@ export async function fetchSalesReport(
 export async function fetchTopMenu(
   start: Date,
   end: Date,
-  limit = 5
+  limit = 5,
+  /** `null` / tidak diisi = semua outlet. */
+  outletId?: string | null
 ): Promise<TopMenuRow[]> {
   const supabase = await createClient();
 
@@ -43,6 +48,7 @@ export async function fetchTopMenu(
     p_start: start.toISOString(),
     p_end: end.toISOString(),
     p_limit: limit,
+    ...(outletId ? { p_outlet_id: outletId } : {}),
   });
 
   if (error) {

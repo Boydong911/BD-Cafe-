@@ -90,6 +90,20 @@ export async function createMenuItem(
     return { error: "Hanya Owner yang boleh menambah menu." };
   }
 
+  // Menu lahir milik satu outlet (hidden input `outlet_id` dari form).
+  const outletId = String(formData.get("outlet_id") ?? "");
+  if (!z.string().uuid().safeParse(outletId).success) {
+    return { error: "Outlet menu tidak valid." };
+  }
+  const { data: targetOutlet } = await supabase
+    .from("outlets")
+    .select("slug, is_active")
+    .eq("id", outletId)
+    .maybeSingle();
+  if (!targetOutlet || !targetOutlet.is_active) {
+    return { error: "Outlet tidak ditemukan atau sudah diarsipkan." };
+  }
+
   let imageUrl: string | null = null;
   const file = formData.get("image") as File | null;
   if (file && file.size > 0) {
@@ -125,6 +139,7 @@ export async function createMenuItem(
     price: parsed.data.price,
     cost_price: parsed.data.cost_price,
     category_id: categoryId,
+    outlet_id: outletId,
     is_available: parsed.data.is_available,
     image_url: imageUrl,
     customization_options: customizationOptions,
@@ -136,7 +151,7 @@ export async function createMenuItem(
 
   revalidatePath("/admin/owner/menu");
   revalidatePath("/menu");
-  redirect("/admin/owner/menu");
+  redirect(`/admin/owner/menu?outlet=${targetOutlet.slug}`);
 }
 
 export async function updateMenuItem(
@@ -158,6 +173,23 @@ export async function updateMenuItem(
   }
 
   const supabase = await createClient();
+
+  // Catat outlet milik item ini supaya setelah tersimpan, redirect kembali
+  // ke daftar menu outlet yang sama (bukan loncat ke pusat).
+  const { data: currentItem } = await supabase
+    .from("menu_items")
+    .select("outlet_id")
+    .eq("id", menuId)
+    .maybeSingle();
+  let outletSlug: string | null = null;
+  if (currentItem?.outlet_id) {
+    const { data: outletRow } = await supabase
+      .from("outlets")
+      .select("slug")
+      .eq("id", currentItem.outlet_id)
+      .maybeSingle();
+    outletSlug = outletRow?.slug ?? null;
+  }
 
   // `customization_options` SENGAJA tidak disentuh saat edit. Opsi itu sudah
   // ditentukan kategori waktu menu dibuat, dan owner mungkin sudah menambah
@@ -192,7 +224,9 @@ export async function updateMenuItem(
   revalidatePath("/admin/owner/menu");
   revalidatePath(`/menu/${menuId}`);
   revalidatePath("/menu");
-  redirect("/admin/owner/menu");
+  redirect(
+    outletSlug ? `/admin/owner/menu?outlet=${outletSlug}` : "/admin/owner/menu"
+  );
 }
 
 export async function deleteMenuItem(menuId: string) {

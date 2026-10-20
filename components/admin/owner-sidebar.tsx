@@ -15,6 +15,7 @@ import {
   Tags,
   Users,
   Menu,
+  Store,
   X,
 } from "lucide-react";
 import { logoutAction } from "@/app/login/actions";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/admin/owner/supply", label: "Supply", icon: Package },
   { href: "/admin/owner/meja", label: "Meja", icon: Grid3x3 },
   { href: "/admin/owner/karyawan", label: "Karyawan", icon: Users },
+  { href: "/admin/owner/outlet", label: "Outlet", icon: Store },
 ];
 
 /**

@@ -46,10 +46,13 @@ export function MenuForm({
   mode,
   categories,
   initialData,
+  outletId,
 }: {
   mode: "create" | "edit";
   categories: MenuFormCategory[];
   initialData?: MenuItemRow;
+  /** Wajib saat mode create: outlet tujuan menu baru (dari ?outlet=<slug>). */
+  outletId?: string;
 }) {
   const router = useRouter();
 
@@ -105,6 +108,13 @@ export function MenuForm({
 
   return (
     <form action={formAction} className="max-w-2xl space-y-6">
+      {/* Outlet milik menu. Create: dari pilihan halaman; Edit: ikut item. */}
+      <input
+        type="hidden"
+        name="outlet_id"
+        value={outletId ?? initialData?.outlet_id ?? ""}
+      />
+
       {state?.error && (
         <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {state.error}

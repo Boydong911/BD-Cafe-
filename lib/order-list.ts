@@ -32,24 +32,33 @@ export type PendingTotals = {
  * pesanan (kode order, nama pemesan, menu, metode bayar), sedangkan yang itu
  * hanya agregat per bucket waktu untuk grafik.
  *
+ * `start`/`end` boleh kosong (`null`) untuk menampilkan seluruh sejarah —
+ * dipakai halaman Riwayat Transaksi.
+ * `outletId` null = semua outlet.
+ *
  * Query dipecah dua supaya jelas mana yang belum lunas dan mana yang sudah,
  * tanpa filter `payment_status` yang bercampur dengan `status` — percampuran
  * seperti itu yang dulu bikin kategori "Selesai" di kasir terlihat kosong.
  */
 export async function fetchOrderList(
-  start: Date,
-  end: Date
+  start: Date | null,
+  end: Date | null,
+  outletId: string | null = null
 ): Promise<OrderListRow[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("orders")
     .select(
       "id, order_number, customer_name, order_type, table_number, payment_method, payment_status, status, total, created_at, order_items(menu_name, quantity, subtotal)"
     )
-    .gte("created_at", start.toISOString())
-    .lte("created_at", end.toISOString())
     .order("created_at", { ascending: false });
+
+  if (start) query = query.gte("created_at", start.toISOString());
+  if (end) query = query.lte("created_at", end.toISOString());
+  if (outletId) query = query.eq("outlet_id", outletId);
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("[sales] gagal memuat daftar pesanan:", error.message);

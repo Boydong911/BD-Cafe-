@@ -1,10 +1,21 @@
 import type { Metadata } from "next";
-import { Wallet, Receipt, PiggyBank, ShoppingBag, Clock, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
+import {
+  Wallet,
+  Receipt,
+  PiggyBank,
+  ShoppingBag,
+  Clock,
+  CheckCircle2,
+  History,
+} from "lucide-react";
 import { SalesChart } from "@/components/admin/sales-chart-lazy";
 import { SalesFilter } from "@/components/admin/sales-filter";
 import { StatCard } from "@/components/admin/stat-card";
 import { TopMenuList } from "@/components/admin/top-menu-list";
 import { OrderListTable } from "@/components/admin/order-list-table";
+import { OutletPicker } from "@/components/admin/outlet-picker";
+import { Button } from "@/components/ui/button";
 import {
   DEFAULT_PERIOD,
   PERIOD_LABELS,
@@ -20,6 +31,7 @@ import {
   summarize,
 } from "@/lib/sales";
 import { fetchOrderList, splitByCompletion, totalsOf } from "@/lib/order-list";
+import { fetchOutlets, resolveOutletScope } from "@/lib/outlets";
 
 export const metadata: Metadata = {
   title: "Penjualan",
@@ -41,10 +53,13 @@ export default async function OwnerSalesPage({
   const period = parsePeriod(params.period, DEFAULT_PERIOD[preset]);
   const range = resolveRange(preset);
 
+  const outlets = await fetchOutlets();
+  const scope = resolveOutletScope(outlets, params.outlet);
+
   const [rows, topMenu, orderList] = await Promise.all([
-    fetchSalesReport(period, range.start, range.end),
-    fetchTopMenu(range.start, range.end, 5),
-    fetchOrderList(range.start, range.end),
+    fetchSalesReport(period, range.start, range.end, scope.outlet_id),
+    fetchTopMenu(range.start, range.end, 5, scope.outlet_id),
+    fetchOrderList(range.start, range.end, scope.outlet_id),
   ]);
 
   const total = summarize(rows);
@@ -60,12 +75,21 @@ export default async function OwnerSalesPage({
   // `min-w-0` mencegah grid melebar melewati layar HP
   return (
     <div className="min-w-0 space-y-6">
-      <div>
-        <h1 className="font-serif text-2xl font-bold text-foreground">Penjualan</h1>
-        <p className="text-sm text-muted-foreground">
-          Laporan omzet, HPP, dan profit — {range.label},{" "}
-          {PERIOD_LABELS[period].toLowerCase()}.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="font-serif text-2xl font-bold text-foreground">
+            Penjualan
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Laporan omzet, HPP, dan profit — {range.label},{" "}
+            {PERIOD_LABELS[period].toLowerCase()} · {scope.nama}.
+          </p>
+        </div>
+        <OutletPicker
+          allowSemua
+          outlets={outlets}
+          currentSlug={scope.slug}
+        />
       </div>
 
       <SalesFilter preset={preset} period={period} />
@@ -156,25 +180,26 @@ export default async function OwnerSalesPage({
         <OrderListTable rows={pending} />
       </div>
 
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <div>
-            <h2 className="font-serif text-lg font-semibold text-foreground">
-              Riwayat Pesanan
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Semua pesanan pada rentang ini, sudah lunas maupun belum.
-            </p>
-          </div>
+      {/*
+        Riwayat panjang dipindah ke halaman tersendiri supaya halaman laporan
+        tetap ringan; scope outlet mengikuti pilihan di atas.
+      */}
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <div className="min-w-0">
+          <h2 className="font-serif text-lg font-semibold text-foreground">
+            Riwayat Pesanan
+          </h2>
           <p className="text-sm text-muted-foreground">
-            {orderList.length} pesanan ·{" "}
-            {rupiah(
-              orderList.reduce((sum, row) => sum + row.total, 0)
-            )}
+            Daftar lengkap per pesanan {scope.slug === "semua" ? "dari semua outlet" : scope.nama} — bentang seluruh
+            waktu.
           </p>
         </div>
-
-        <OrderListTable rows={orderList} />
+        <Button asChild>
+          <Link href={`/admin/owner/penjualan/riwayat-transaksi/${scope.slug}`}>
+            <History className="h-4 w-4" />
+            Lihat Riwayat Transaksi
+          </Link>
+        </Button>
       </div>
     </div>
   );

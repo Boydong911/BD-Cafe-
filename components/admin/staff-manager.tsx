@@ -1,7 +1,7 @@
 // File: components/admin/staff-manager.tsx
 "use client";
 
-import { useActionState, useRef, useState, useTransition } from "react";
+import { useEffect, useActionState, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
@@ -21,6 +21,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -43,6 +50,7 @@ import {
 import {
   createStaff,
   deleteStaff,
+  moveStaff,
   resetStaffPassword,
   updateStaffName,
   type ActionResult,
@@ -54,6 +62,8 @@ export type StaffRow = {
   username: string;
   full_name: string | null;
   role: "owner" | "kasir";
+  outlet_id: string | null;
+  outlet_nama: string | null;
   created_at: string;
 };
 
@@ -78,14 +88,27 @@ function generatePassword(): string {
   return /[0-9]/.test(out) ? out : out.slice(0, 11) + "7";
 }
 
+export type StaffOutletOption = { id: string; nama: string; is_pusat: boolean };
+
 export function StaffManager({
   staff,
   currentUserId,
+  outlets,
+  selectedOutletId,
 }: {
   staff: StaffRow[];
   currentUserId: string;
+  /** Daftar outlet aktif untuk penempatan kasir. */
+  outlets: StaffOutletOption[];
+  selectedOutletId: string;
 }) {
   const router = useRouter();
+  // Akun kasir baru otomatis mengikuti outlet yang sedang dilihat owner.
+  const [newOutletId, setNewOutletId] = useState(selectedOutletId);
+
+  useEffect(() => {
+    setNewOutletId(selectedOutletId);
+  }, [selectedOutletId]);
   const [state, formAction, isCreating] = useActionState<ActionState, FormData>(
     createStaff,
     initialState
@@ -189,6 +212,28 @@ export function StaffManager({
               Dipakai untuk login. huruf, angka, titik, _ dan - saja.
             </p>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="outlet_kasir_baru">Penempatan Outlet</Label>
+          <input type="hidden" name="outlet_id" value={newOutletId} />
+          <Select value={newOutletId} onValueChange={setNewOutletId}>
+            <SelectTrigger id="outlet_kasir_baru" className="w-full sm:w-72">
+              <SelectValue placeholder="Pilih outlet" />
+            </SelectTrigger>
+            <SelectContent>
+              {outlets.map((outlet) => (
+                <SelectItem key={outlet.id} value={outlet.id}>
+                  {outlet.nama}
+                  {outlet.is_pusat ? " (pusat)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Kasir hanya melihat pesanan outlet penempatannya. Bisa dipindah
+            kemudian lewat kolom Outlet di daftar bawah.
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -298,6 +343,7 @@ export function StaffManager({
                 <TableHead>Karyawan</TableHead>
                 <TableHead>Username</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Outlet</TableHead>
                 <TableHead>Bergabung</TableHead>
                 <TableHead className="w-28 text-right">Aksi</TableHead>
               </TableRow>
@@ -306,7 +352,7 @@ export function StaffManager({
               {staff.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="py-12 text-center text-sm text-muted-foreground"
                   >
                     Belum ada karyawan.
@@ -372,6 +418,38 @@ export function StaffManager({
                         <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                           Kasir
                         </span>
+                      )}
+                    </TableCell>
+
+                    <TableCell>
+                      {person.role === "owner" ? (
+                        <span className="text-xs text-muted-foreground">
+                          Semua outlet
+                        </span>
+                      ) : (
+                        <Select
+                          value={person.outlet_id ?? ""}
+                          onValueChange={(nextOutletId) => {
+                            if (nextOutletId === person.outlet_id) return;
+                            run(() => moveStaff(person.id, nextOutletId));
+                          }}
+                        >
+                          <SelectTrigger className="h-8 w-44 text-xs">
+                            <SelectValue placeholder="Pilih outlet" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {outlets.map((outlet) => (
+                              <SelectItem
+                                key={outlet.id}
+                                value={outlet.id}
+                                className="text-xs"
+                              >
+                                {outlet.nama}
+                                {person.outlet_id === outlet.id ? " (sekarang)" : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
                     </TableCell>
 

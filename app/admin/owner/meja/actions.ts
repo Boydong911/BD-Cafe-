@@ -35,7 +35,23 @@ export async function createTable(formData: FormData) {
     return { error: parsed.error.issues[0].message };
   }
 
+  // Meja selalu milik satu outlet (hidden input dari halaman meja).
+  const outletId = String(formData.get("outlet_id") ?? "");
+  if (!z.string().uuid().safeParse(outletId).success) {
+    return { error: "Outlet tidak valid." };
+  }
+
   const supabase = await requireOwner();
+
+  // Jaring pengaman: outlet harus ada dan masih aktif.
+  const { data: outlet } = await supabase
+    .from("outlets")
+    .select("is_active")
+    .eq("id", outletId)
+    .maybeSingle();
+  if (!outlet || !outlet.is_active) {
+    return { error: "Outlet tidak ditemukan atau sudah diarsipkan." };
+  }
 
   // Catatan: `tsconfig` memakai `strict: false`, dan tanpa `strictNullChecks`
   // inferensi Zod v3 degrade — `parsed.data` jadi bertipe semua-opsional.
@@ -43,12 +59,15 @@ export async function createTable(formData: FormData) {
   const payload: Database["public"]["Tables"]["tables"]["Insert"] = {
     table_number: parsed.data.table_number,
     label: parsed.data.label ?? null,
+    outlet_id: outletId,
   };
 
   const { error } = await supabase.from("tables").insert(payload);
 
   if (error) {
-    if (error.code === "23505") return { error: "Nomor meja sudah ada" };
+    if (error.code === "23505") {
+      return { error: "Nomor meja sudah ada di outlet ini." };
+    }
     return { error: error.message };
   }
 

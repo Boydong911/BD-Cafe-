@@ -80,6 +80,12 @@ export async function createStaff(
     return { success: false, error: parsed.error.issues[0].message };
   }
 
+  // Kasir harus terikat satu outlet (hidden input dari halaman karyawan).
+  const outletId = String(formData.get("outlet_id") ?? "");
+  if (!z.string().uuid().safeParse(outletId).success) {
+    return { success: false, error: "Outlet wajib dipilih." };
+  }
+
   const { supabase, ok, error: authError } = await requireOwner();
   if (!ok) return { success: false, error: authError ?? "Akses ditolak." };
 
@@ -87,6 +93,7 @@ export async function createStaff(
     p_username: parsed.data.username,
     p_password: parsed.data.password,
     p_full_name: parsed.data.full_name,
+    p_outlet_id: outletId,
   });
 
   if (error) {
@@ -174,4 +181,37 @@ export async function deleteStaff(staffId: string): Promise<ActionResult> {
 
   revalidateStaff();
   return { success: true, message: "Karyawan dihapus." };
+}
+
+const moveSchema = z.object({
+  staffId: z.string().uuid("Data tidak valid."),
+  outletId: z.string().uuid("Data tidak valid."),
+});
+
+/**
+ * Pindahkan kasir ke outlet lain. Jalannya lewat RPC move_staff_account —
+ * profiles tidak punya policy UPDATE untuk owner di RLS, jadi function
+ * SECURITY DEFINER-lah yang berhak menggeser outlet_id.
+ */
+export async function moveStaff(
+  staffId: string,
+  outletId: string
+): Promise<ActionResult> {
+  const parsed = moveSchema.safeParse({ staffId, outletId });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  const { supabase, ok, error: authError } = await requireOwner();
+  if (!ok) return { success: false, error: authError ?? "Akses ditolak." };
+
+  const { error } = await supabase.rpc("move_staff_account", {
+    p_staff_id: parsed.data.staffId,
+    p_outlet_id: parsed.data.outletId,
+  });
+
+  if (error) return { success: false, error: error.message };
+
+  revalidateStaff();
+  return { success: true, message: "Karyawan dipindahkan ke outlet baru." };
 }

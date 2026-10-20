@@ -15,6 +15,7 @@ export type MenuItemRow = {
   price: number;
   cost_price: number;
   category_id: string | null;
+  outlet_id: string;
   is_available: boolean;
   image_url: string | null;
   customization_options: CustomizationGroup[] | null;

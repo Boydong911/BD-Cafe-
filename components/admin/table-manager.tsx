@@ -15,7 +15,15 @@ import { TableQrCard } from "@/components/admin/table-qr-card";
 
 type TableRow = Tables<"tables">;
 
-export function TableManager({ initialTables }: { initialTables: TableRow[] }) {
+export function TableManager({
+  initialTables,
+  outletId,
+  outletIsPusat,
+}: {
+  initialTables: TableRow[];
+  outletId: string;
+  outletIsPusat: boolean;
+}) {
   const [tables, setTables] = useState(initialTables);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -54,6 +62,7 @@ export function TableManager({ initialTables }: { initialTables: TableRow[] }) {
         action={handleCreate}
         className="flex flex-col sm:flex-row gap-3 bg-card border border-border rounded-lg p-4"
       >
+        <input type="hidden" name="outlet_id" value={outletId} />
         <Input name="table_number" placeholder="Nomor meja (contoh: 05)" required className="sm:w-48" />
         <Input name="label" placeholder="Label (opsional, contoh: Dekat Jendela)" className="flex-1" />
         <Button type="submit">Tambah Meja</Button>
@@ -91,15 +100,21 @@ export function TableManager({ initialTables }: { initialTables: TableRow[] }) {
                   />
                 </TableCell>
                 <TableCell>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">Lihat QR</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogTitle>QR Meja {t.table_number}</DialogTitle>
-                      <TableQrCard tableNumber={t.table_number} label={t.label} />
-                    </DialogContent>
-                  </Dialog>
+                  {outletIsPusat ? (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">Lihat QR</Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogTitle>QR Meja {t.table_number}</DialogTitle>
+                        <TableQrCard tableNumber={t.table_number} label={t.label} />
+                      </DialogContent>
+                    </Dialog>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      QR outlet menyusul di Tahap 2
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
                   <Button
