@@ -46,9 +46,9 @@ type OrderRow = {
 export default async function OrderPage({
   params,
 }: {
-  params: Promise<{ orderId: string }>;
+  params: Promise<{ outlet: string; orderId: string }>;
 }) {
-  const { orderId } = await params;
+  const { outlet: outletSlug, orderId } = await params;
   const supabase = await createClient();
 
   /*
@@ -130,7 +130,7 @@ export default async function OrderPage({
               : "Selesaikan pembayaran dulu untuk mendapat nomor antrean."}
           </p>
           <Button asChild variant="outline" className="mt-4">
-            <Link href={`/order/${order.id}/pay`}>Buka Halaman Pembayaran</Link>
+            <Link href={`/${outletSlug}/order/${order.id}/pay`}>Buka Halaman Pembayaran</Link>
           </Button>
         </div>
       )}
@@ -194,7 +194,7 @@ export default async function OrderPage({
         query halaman: di titik ini pesanan sudah jadi fakta, jadi inilah meja
         yang benar-benar dipakai pelanggan.
       */}
-      <OrderExitButtons order={receiptOrder} />
+      <OrderExitButtons order={receiptOrder} outletSlug={outletSlug} />
     </div>
   );
 }

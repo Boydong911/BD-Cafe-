@@ -6,6 +6,7 @@ import {
   MenuShowcaseSlider,
   type ShowcaseMenuItem,
 } from "@/components/customer/menu-showcase-slider";
+import { PUSAT_SLUG } from "@/lib/outlet-routes";
 
 export function HeroSection({ menuItems }: { menuItems: ShowcaseMenuItem[] }) {
   return (
@@ -75,7 +76,7 @@ export function HeroSection({ menuItems }: { menuItems: ShowcaseMenuItem[] }) {
           size="lg"
           className="border-2 border-white bg-transparent text-white transition-colors duration-200 hover:bg-white hover:text-black"
         >
-          <Link href="/menu">Lihat Menunya Disini Yaa</Link>
+          <Link href={`/${PUSAT_SLUG}/menu`}>Lihat Menunya Disini Yaa</Link>
         </Button>
       </div>
     </section>

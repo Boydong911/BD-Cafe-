@@ -8,15 +8,20 @@ import { Button } from "@/components/ui/button";
 export function TableQrCard({
   tableNumber,
   label,
+  outletSlug,
 }: {
   tableNumber: string;
   label?: string | null;
+  /** Slug outlet meja ini — QR mengarah ke menu outlet tersebut. */
+  outletSlug: string;
 }) {
   const [url, setUrl] = useState("");
 
   useEffect(() => {
-    setUrl(`${window.location.origin}/menu?table=${tableNumber}`);
-  }, [tableNumber]);
+    setUrl(
+      `${window.location.origin}/${outletSlug}/menu?table=${encodeURIComponent(tableNumber)}`
+    );
+  }, [tableNumber, outletSlug]);
 
   function handlePrint() {
     window.print();
@@ -34,6 +39,8 @@ export function TableQrCard({
         <div className="text-center">
           <p className="font-serif text-xl font-bold">Meja {tableNumber}</p>
           {label && <p className="text-sm text-gray-500">{label}</p>}
+          {/* Nama outlet tampil di bawah QR — supaya kertas QR tiap outlet mudah dibedakan */}
+          <p className="text-xs text-gray-500">/&#8203;{outletSlug}/menu</p>
         </div>
       </div>
       <Button onClick={handlePrint} className="w-full mt-3">

@@ -86,6 +86,7 @@ export function KasirBoard({
   menuItems,
   categoryGroups,
   kasirName,
+  outletSlug,
 }: {
   orders: KasirOrder[];
   /** Katalog untuk tab "Pesan Menu". Diambil server, bukan fetch dari browser. */
@@ -93,6 +94,8 @@ export function KasirBoard({
   categoryGroups: CategoryFilterGroup[];
   /** Nama kasir yang sedang memakai halaman ini. Kosong kalau gagal diambil. */
   kasirName: string | null;
+  /** Slug outlet board ini — tombol checkout membawa pesanan ke outlet yang sama. */
+  outletSlug: string;
 }) {
   const router = useRouter();
   const { totalItems, totalPrice, clearScannedTable, hydrated } = useCart();
@@ -198,10 +201,10 @@ export function KasirBoard({
    * tanpa gunanya.
    */
   useEffect(() => {
-    if (hydrated) clearScannedTable();
+    if (hydrated) clearScannedTable(outletSlug);
     // Opening the board starts a fresh cashier order. Clearing it first makes
     // an abandoned session from the previous round not carry over into a new
-    // one.
+    // one. Sesinya sekalian mengunci ke outlet board ini.
     clearOrderSource();
     // clearScannedTable dibuat ulang tiap render CartProvider, jadi kalau
     // ikut jadi dependensi efek ini akan terus jalan. Sifatnya idempoten
@@ -344,6 +347,7 @@ export function KasirBoard({
             items={menuItems}
             groups={categoryGroups}
             tableParam={null}
+            outletSlug={outletSlug}
             orderable
           />
 
@@ -379,7 +383,7 @@ export function KasirBoard({
                 disabled={totalItems === 0}
                 className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
               >
-                <Link href="/checkout">Lanjut ke Checkout</Link>
+                <Link href={`/${outletSlug}/checkout`}>Lanjut ke Checkout</Link>
               </Button>
             </div>
           </aside>

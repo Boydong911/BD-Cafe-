@@ -28,8 +28,12 @@ type PayRow = {
   created_at: string;
 };
 
-export default async function PayPage({ params }: { params: Promise<{ orderId: string }> }) {
-  const { orderId } = await params;
+export default async function PayPage({
+  params,
+}: {
+  params: Promise<{ outlet: string; orderId: string }>;
+}) {
+  const { outlet: outletSlug, orderId } = await params;
   const supabase = await createClient();
 
   // RPC, bukan select langsung — policy RLS select untuk anon sudah dikunci
@@ -44,7 +48,7 @@ export default async function PayPage({ params }: { params: Promise<{ orderId: s
 
   // Kalau sudah dibayar / dibatalkan, langsung arahkan ke halaman antrean
   if (order.payment_status === "paid" || order.status === "cancelled") {
-    return <PaymentPanel orderId={order.id} state="redirect" />;
+    return <PaymentPanel orderId={order.id} outletSlug={outletSlug} state="redirect" />;
   }
 
   // Kalau lewat batas waktu, batalkan sekalian
@@ -53,6 +57,7 @@ export default async function PayPage({ params }: { params: Promise<{ orderId: s
   return (
     <PaymentPanel
       orderId={order.id}
+      outletSlug={outletSlug}
       state={expired ? "expired" : "waiting"}
       method={order.payment_method}
       total={Number(order.total)}

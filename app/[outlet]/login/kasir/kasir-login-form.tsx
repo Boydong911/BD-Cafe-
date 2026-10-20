@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
-import { kasirLoginAction, type LoginState } from "../actions";
+import { kasirLoginAction, type LoginState } from "@/app/login/actions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,16 +22,24 @@ function SubmitButton() {
 }
 
 /**
- * Halaman login KASIR (`/login/kasir`).
+ * Halaman login KASIR ber-outlet (mis. /outlet-a/login/kasir).
  *
- * Terpisah dari halaman owner supaya kasir tidak salah masuk ke halaman yang
- * salah. Setelah login, langsung mendarat di /admin/kasir.
+ * Tiap outlet punya pintu sendiri supaya jelas tempat kasir outlet mana
+ * yang harus berdiri. Setelah login, kasir mendarat di board outlet-nya
+ * sendiri (app/login/actions.ts menyesuaikan target setelah cek profil).
  *
  * `notice` adalah peringatan yang muncul DI BAWAH KOLOM PASSWORD, di oper
  * dari halaman yang memindahkan orang ke sini (mis. kasir yang mencoba
  * login di halaman owner ditendang ke sini dengan notice "bukan-owner").
  */
-export default function KasirLoginForm({ notice }: { notice?: string }) {
+export default function KasirLoginForm({
+  notice,
+  outletSlug,
+}: {
+  notice?: string;
+  /** Slug outlet pintu login ini — dipakai link ke pendaftarannya. */
+  outletSlug: string;
+}) {
   const [state, formAction] = useActionState(kasirLoginAction, initialState);
 
   return (
@@ -86,7 +94,7 @@ export default function KasirLoginForm({ notice }: { notice?: string }) {
 
           <div className="mt-4 border-t pt-4">
             <Button asChild variant="outline" className="w-full">
-              <Link href="/daftar">
+              <Link href={`/${outletSlug}/daftar`}>
                 <UserPlus className="mr-1.5 h-4 w-4" />
                 Daftarkan Karyawan Baru
               </Link>

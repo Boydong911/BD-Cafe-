@@ -7,21 +7,30 @@ import type { MenuCardItem } from "@/components/customer/menu-card";
 /**
  * Ambil menu + kategori untuk ditampilkan sebagai katalog.
  *
- * Dipakai oleh halaman /menu dan oleh tab "Pesan Menu" di halaman kasir,
- * supaya keduanya tidak punya query dan pemetaan field yang terpisah.
+ * Dipakai oleh halaman menu ber-outlet dan oleh tab "Pesan Menu" di halaman
+ * kasir, supaya keduanya tidak punya query dan pemetaan field yang terpisah.
  * Satu sumber data, dua pemakai.
+ *
+ * `outletId` WAJIB diisi oleh pemanggil yang menampilkan menu outlet
+ * tertentu — tanpa itu katalog menampilkan menu SEMUA outlet sekaligus
+ * (tidak ada pemakai seperti itu lagi, tapi param tetap opsional supaya
+ * pemanggil lama tidak tiba-tiba rusak).
  */
-export async function fetchMenuCatalog(): Promise<{
+export async function fetchMenuCatalog(outletId?: string | null): Promise<{
   items: MenuCardItem[];
   groups: Awaited<ReturnType<typeof fetchCategoryTree>>;
 }> {
   const supabase = await createClient();
 
+  let itemsQuery = supabase
+    .from("menu_items")
+    .select("id, name, description, price, image_url, is_available, customization_options, categories(id, name)")
+    .order("name", { ascending: true });
+
+  if (outletId) itemsQuery = itemsQuery.eq("outlet_id", outletId);
+
   const [{ data, error }, groups] = await Promise.all([
-    supabase
-      .from("menu_items")
-      .select("id, name, description, price, image_url, is_available, customization_options, categories(id, name)")
-      .order("name", { ascending: true }),
+    itemsQuery,
     fetchCategoryTree(),
   ]);
 

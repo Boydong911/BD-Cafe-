@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ReceiptButton } from "@/components/admin/receipt-button";
 import { isFromKasir } from "@/components/customer/order-source";
-import { menuHref } from "@/lib/menu-href";
+import { outletMenuHref } from "@/lib/outlet-routes";
 import type { KasirOrder } from "@/types/order";
 
 /**
@@ -25,7 +25,14 @@ import type { KasirOrder } from "@/types/order";
  * bisa dibaca di browser. Tanpa itu Server Component akan selalu merender
  * cabang pelanggan dan tombol kasir tidak pernah muncul.
  */
-export function OrderExitButtons({ order }: { order: KasirOrder }) {
+export function OrderExitButtons({
+  order,
+  outletSlug,
+}: {
+  order: KasirOrder;
+  /** Slug outlet tempat pesanan dibuat — kembali ke menu/board outlet yang sama. */
+  outletSlug: string;
+}) {
   const [fromKasir, setFromKasir] = useState(false);
 
   useEffect(() => {
@@ -38,7 +45,7 @@ export function OrderExitButtons({ order }: { order: KasirOrder }) {
         <ReceiptButton order={order} className="flex-1" />
 
         <Button asChild className="flex-1">
-          <Link href="/admin/kasir">
+          <Link href={`/${outletSlug}/admin/kasir`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Kembali ke Kasir
           </Link>
@@ -50,7 +57,7 @@ export function OrderExitButtons({ order }: { order: KasirOrder }) {
   return (
     <div className="border-t pt-4">
       <Button asChild variant="outline" className="w-full">
-        <Link href={menuHref(order.table_number)}>
+        <Link href={outletMenuHref(outletSlug, order.table_number)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Kembali ke Menu
         </Link>

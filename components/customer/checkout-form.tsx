@@ -8,17 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { QrCode, ShoppingBag, Loader2 } from "lucide-react";
 import { useCart } from "@/lib/cart/cart-context";
-import { createOrder, type CheckoutInput } from "@/app/checkout/actions";
+import { createOrder, type CheckoutInput } from "@/app/[outlet]/checkout/actions";
 import { ConfirmOrderDialog } from "@/components/customer/confirm-order-dialog";
-import { menuHref } from "@/lib/menu-href";
+import { outletMenuHref } from "@/lib/outlet-routes";
 import { isFromKasir } from "@/components/customer/order-source";
 
 type PaymentMethod = "qris" | "cash";
 
-/** Tujuan tombol keluar untuk kasir: board antrean, bukan katalog. */
-const KASIR_HREF = "/admin/kasir";
-
-export function CheckoutForm() {
+export function CheckoutForm({ outletSlug }: { outletSlug: string }) {
   const { items, totalPrice, clearCart, addItem, session, setManualSession, setCustomerName } =
     useCart();
 
@@ -57,8 +54,9 @@ export function CheckoutForm() {
   }, []);
 
   const scannedTableHref = fromKasir
-    ? KASIR_HREF
-    : menuHref(session.isScanned ? session.tableNumber : null);
+    ? // Kasir memesan dari counter -> keluar ke board kasir outlet ini
+      `/${outletSlug}/admin/kasir`
+    : outletMenuHref(outletSlug, session.isScanned ? session.tableNumber : null);
 
   if (items.length === 0) {
     return (
@@ -103,6 +101,8 @@ export function CheckoutForm() {
       order_type: session.orderType,
       table_number:
         session.orderType === "dine_in" ? session.tableNumber!.trim() : undefined,
+      // Outlet tempat checkout halaman ini berdiri — server memvalidasi ulang.
+      outlet_slug: outletSlug,
       notes: notes.trim() || undefined,
       payment_method: paymentMethod,
       from_kasir: fromKasir,

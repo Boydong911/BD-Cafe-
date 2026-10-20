@@ -6,36 +6,53 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PUSAT_SLUG } from "@/lib/outlet-routes";
 
 /*
  * Item nav. `href` kosong berarti belum ada tujuan -- sengaja tidak dibuat
  * halaman kosong untuk masing-masing, karena itu hanya menambah file tanpa
  * isi. Isi `href` begitu halaman untuk item tersebut dibuat.
+ *
+ * "Our Menu" mengikuti outlet halaman yang sedang dibuka: di /outlet-b
+ * menuju /outlet-b/menu. Halaman tanpa konteks outlet (landing) memakai
+ * outlet pusat.
  */
-const NAV_ITEMS = [
-  { label: "Home", href: "/" },
-  { label: "About Us", href: "" },
-  { label: "Our Menu", href: "/menu" },
-  { label: "Our Outlet", href: "" },
-  { label: "Facility", href: "" },
-  { label: "Partnership", href: "" },
-  { label: "Proposal", href: "" },
-  { label: "Contact", href: "" },
-];
+function navItems(outletSlug: string) {
+  return [
+    { label: "Home", href: "/" },
+    { label: "About Us", href: "" },
+    { label: "Our Menu", href: `/${outletSlug}/menu` },
+    { label: "Our Outlet", href: "" },
+    { label: "Facility", href: "" },
+    { label: "Partnership", href: "" },
+    { label: "Proposal", href: "" },
+    { label: "Contact", href: "" },
+  ];
+}
 
 /**
  * Navbar BD Cafe.
  *
  * Latar selalu hitam 80% (`bg-black/80`) dan logo selalu putih, jadi navbar
- * di halaman depan yang gelap dan di /menu yang terang tetap terbaca tanpa
- * filter apa pun pada logo.
+ * di halaman depan yang gelap dan di menu outlet yang terang tetap terbaca
+ * tanpa filter apa pun pada logo.
  *
  * `overlay` hanya mengatur posisi: `true` menumpuk di atas foto hero
- * (halaman depan), `false` jadi bar sticky di atas konten (/menu).
+ * (halaman depan), `false` jadi bar sticky di atas konten (menu outlet).
+ *
+ * `outletSlug` menentukan tujuan link "Our Menu". Sekarang menu per outlet,
+ * jadi di /outlet-b navbar harus bawa pelanggan ke menu outlet yang sama.
  */
-export function SiteNav({ overlay = false }: { overlay?: boolean }) {
+export function SiteNav({
+  overlay = false,
+  outletSlug = PUSAT_SLUG,
+}: {
+  overlay?: boolean;
+  outletSlug?: string;
+}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const NAV_ITEMS = navItems(outletSlug);
 
   /*
    * Item aktif mengikuti halaman yang sedang dibuka, bukan ditulis manual.

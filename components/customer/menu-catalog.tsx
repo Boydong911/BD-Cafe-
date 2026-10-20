@@ -12,7 +12,8 @@ export function MenuCatalog({
   items,
   groups,
   tableParam,
-  /** Label kategori dibuat lebih besar dan rata tengah. Dipakai di /menu. */
+  outletSlug,
+  /** Label kategori dibuat lebih besar dan rata tengah. Dipakai di menu pelanggan. */
   centerFilter = false,
   /** Paksa tombol pesan muncul walau `tableParam` kosong. Dipakai di kasir. */
   orderable,
@@ -20,6 +21,8 @@ export function MenuCatalog({
   items: MenuCardItem[];
   groups: CategoryFilterGroup[];
   tableParam: string | null;
+  /** Slug outlet tempat katalog ini berdiri — dipakai URL detail menu. */
+  outletSlug: string;
   centerFilter?: boolean;
   orderable?: boolean;
 }) {
@@ -79,6 +82,7 @@ export function MenuCatalog({
               key={item.id}
               item={item}
               tableParam={tableParam}
+              outletSlug={outletSlug}
               orderable={orderable}
             />
           ))}

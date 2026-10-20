@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { createClient, createActiveStaffClient, hasStaffSession } from "@/lib/supabase/server";
+import { fetchOutletBySlug } from "@/lib/outlets";
 import type { CustomizationGroup } from "@/types/menu";
 import type { Json } from "@/types/database.types";
 
@@ -28,13 +29,26 @@ const checkoutSchema = z.object({
   payment_method: z.enum(["qris", "cash"]),
   items: z.array(cartItemSchema).min(1, "Keranjang tidak boleh kosong"),
   /**
-   * Dikirim client, tetap harus combinar dengan `hasStaffSession()` di server.
+   * Slug outlet tempat checkout berdiri (/outlet-a, /outlet-b, ...).
+   *
+   * Dikirim dari params halaman checkout, tapi TIDAK dipercaya mentah-mentah:
+   * server tetap mencocokkannya dengan tabel outlets dan menempelkan
+   * outlet_id hasil lookup ke pesanan. Ini yang membuat nomor antrean
+   * per-outlet, laporan per-outlet, dan board kasir per-outlet benar.
+   */
+  outlet_slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Alamat outlet tidak sah."),
+  /**
+   * Dikirim client, tetap harus digabungkan dengan `hasStaffSession()` di server.
    *
    * Penanda ini HANYA untuk tampilan, tapi ikut menentukan apakah pesanan
    * tunai langsung dicatat lunas. Kalau tidak digabung dengan sesi staff,
    * pesanan tunai seorang pelanggan di tablet counter yang dipakai bersama
-   * akan otomatis deemed lunas tanpa pernah membayar -- dia cuma perlu ikut
-   * pakai perangkat tempat kasir masih login.
+   * akan otomatis diperlakukan lunas tanpa pernah membayar -- dia cuma perlu
+   * ikut pakai perangkat tempat kasir masih login.
    */
   from_kasir: z.boolean().optional().default(false),
 });
@@ -48,11 +62,34 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
     return { error: parsed.error.issues[0]?.message ?? "Data pesanan tidak valid" };
   }
 
-  const { customer_name, order_type, table_number, notes, payment_method, items, from_kasir } =
-    parsed.data;
+  const {
+    customer_name,
+    order_type,
+    table_number,
+    notes,
+    payment_method,
+    items,
+    from_kasir,
+    outlet_slug,
+  } = parsed.data;
 
   if (order_type === "dine_in" && !table_number) {
     return { error: "Nomor meja wajib diisi untuk dine-in." };
+  }
+
+  /*
+   * Tentukan outlet dari slug halaman checkout. Inilah sumber kebenaran
+   * outlet untuk pesanan ini — bukan isian dari keranjang (client).
+   */
+  const outlet = await fetchOutletBySlug(outlet_slug);
+  if (!outlet) {
+    return {
+      error:
+        "Outlet tidak dikenal. Pesan ulang lewat QR meja atau URL outlet yang benar.",
+    };
+  }
+  if (outlet.is_active === false) {
+    return { error: `Outlet "${outlet.nama}" sedang tidak aktif.` };
   }
 
   // Seat mengikuti siapa yang memesan: kasir dari board (seat kasir), owner
@@ -60,12 +97,15 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
   // insert tetap terbuka via RLS). createActiveStaffClient yang memilih.
   const supabase = await createActiveStaffClient();
 
-  // Ambil data menu terbaru dari DB (jangan percaya harga dari client!)
+  // Ambil data menu terbaru dari DB (jangan percaya harga dari client!).
+  // Dibatasi ke outlet checkout ini: keranjang yang dibawa menyimpang dari
+  // outlet lain tidak tembus — menu outlet B yang dipakai di outlet A ditolak.
   const menuIds = items.map((i) => i.menu_item_id);
   const { data: menuItems, error: menuError } = await supabase
     .from("menu_items")
     .select("id, name, price, cost_price, is_available, customization_options")
-    .in("id", menuIds);
+    .in("id", menuIds)
+    .eq("outlet_id", outlet.id);
 
   if (menuError || !menuItems || menuItems.length === 0) {
     return { error: "Gagal memuat data menu." };
@@ -87,7 +127,7 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
   for (const item of items) {
     const menu = menuMap.get(item.menu_item_id);
     if (!menu) {
-      return { error: "Salah satu menu tidak ditemukan." };
+      return { error: "Salah satu menu tidak ditemukan di outlet ini." };
     }
     if (!menu.is_available) {
       return { error: `Menu "${menu.name}" sedang habis, silakan hapus dari keranjang.` };
@@ -139,7 +179,9 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
 
   const total = subtotal; // tempat menambah pajak/biaya layanan jika ada
 
-  // Nomor antrean BELUM dibuat di sini — baru saat pembayaran terkonfirmasi.
+  // Nomor antrean BELUM dibuat di sini — baru saat pembayaran terkonfirmasi
+  // (trigger per-outlet). outlet_id ditempel langsung dari lookup slug; trigger
+  // fondasi tetap jadi jaring pengaman kalau suatu saat ada insert tanpa outlet_id.
   // Cek constraint: dine_in wajib punya table_number, takeaway wajib null.
   const { data: order, error: orderError } = await supabase
     .from("orders")
@@ -153,6 +195,7 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
       status: "pending",
       subtotal,
       total,
+      outlet_id: outlet.id,
     })
     .select("id")
     .single();
@@ -184,6 +227,10 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
    *
    * QRIS tetap lewat halaman pembayaran, karena di situ kasir menekan
    * "Sudah Bayar" untuk mendapatkan nomor antrean.
+   *
+   * Keduanya kini diarahkan ke HALAMAN OUTLET YANG SAMA
+   * (/{slug}/order/...), supaya semua tombol balik di dalamnya punya
+   * konteks outlet yang benar.
    */
   if (payment_method === "cash" && from_kasir && (await hasStaffSession())) {
     /*
@@ -213,8 +260,8 @@ export async function createOrder(input: CheckoutInput): Promise<CheckoutState> 
       console.error("[checkout] confirm_cash_payment gagal:", cashError.message);
     }
 
-    redirect(`/order/${order.id}`);
+    redirect(`/${outlet.slug}/order/${order.id}`);
   }
 
-  redirect(`/order/${order.id}/pay`);
+  redirect(`/${outlet.slug}/order/${order.id}/pay`);
 }

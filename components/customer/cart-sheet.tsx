@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/lib/cart/cart-context";
 import { CartItemList, formatPrice } from "@/components/customer/cart-items";
+import { PUSAT_SLUG } from "@/lib/outlet-routes";
 
 export function CartSheet() {
   const { items, totalItems, totalPrice, session, setManualSession, setCustomerName } =
@@ -139,7 +140,15 @@ export function CartSheet() {
             disabled={items.length === 0}
             className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
           >
-            <Link href="/checkout">Lanjut ke Checkout</Link>
+            <Link
+              href={`/${
+                // Slug outlet dicatat TableSessionSync di tiap halaman menu;
+                // di luar konteks outlet (tak mungkin ada keranjang) jatuh ke pusat.
+                session.outletSlug ?? PUSAT_SLUG
+              }/checkout`}
+            >
+              Lanjut ke Checkout
+            </Link>
           </Button>
 
           {/*

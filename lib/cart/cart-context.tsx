@@ -34,6 +34,13 @@ export type OrderSession = {
   tableNumber: string | null;
   /** true kalau tableNumber didapat dari scan QR (bukan diketik manual) */
   isScanned: boolean;
+  /**
+   * Slug outlet tempat pesanan dibuat (/outlet-a, /outlet-b, ...).
+   * Diisi TableSessionSync di setiap halaman ber-outlet, dipakai tombol
+   * "Lanjut ke Checkout" di keranjang agar mendarat di checkout outlet yang
+   * sama. null -> dianggap outlet pusat (halaman tanpa konteks outlet).
+   */
+  outletSlug: string | null;
   /** "Pesanan Atas Nama" — nama yang dipanggil kasir saat pesanan siap */
   customerName: string;
 };
@@ -55,15 +62,19 @@ type CartContextValue = {
   setManualSession: (session: Pick<OrderSession, "orderType" | "tableNumber">) => void;
   /** Dipanggil dari kolom "Pesanan Atas Nama" di keranjang */
   setCustomerName: (name: string) => void;
-  /** Dipanggil saat ada ?table= baru dari QR — reset keranjang kalau beda dari sesi aktif */
-  applyScannedTable: (table: string) => void;
+  /**
+   * Dipanggil saat ada ?table= baru dari QR — reset keranjang kalau beda dari
+   * sesi aktif. Slug outlet tempat QR itu tercetak ikut dikunci ke sesi.
+   */
+  applyScannedTable: (table: string, outletSlug: string) => void;
   /**
    * Dipanggil saat halaman dibuka TANPA ?table= (mis. customer masuk lewat
    * tombol "Lihat Menu" di landing page). Membersihkan sisa sesi meja hasil
    * scan sebelumnya supaya customer bebas pilih Dine In / Take Away sendiri.
-   * Isian "Pesanan Atas Nama" tetap dipertahankan.
+   * Isian "Pesanan Atas Nama" tetap dipertahankan. Slug outlet halaman ini
+   * selalu disimpan supaya keranjang tahu ke outlet mana checkout-nya.
    */
-  clearScannedTable: () => void;
+  clearScannedTable: (outletSlug: string) => void;
   /** true setelah cart & sesi selesai dimuat dari localStorage */
   hydrated: boolean;
 };
@@ -76,6 +87,7 @@ const DEFAULT_SESSION: OrderSession = {
   orderType: "takeaway",
   tableNumber: null,
   isScanned: false,
+  outletSlug: null,
   customerName: "",
 };
 
@@ -107,6 +119,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           orderType: parsed.orderType ?? DEFAULT_SESSION.orderType,
           tableNumber: parsed.tableNumber ?? null,
           isScanned: parsed.isScanned ?? false,
+          outletSlug: parsed.outletSlug ?? null,
           customerName: parsed.customerName ?? "",
         });
       }
@@ -159,9 +172,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setSession((prev) => ({ ...prev, customerName: name }));
   };
 
-  const applyScannedTable: CartContextValue["applyScannedTable"] = (table) => {
+  const applyScannedTable: CartContextValue["applyScannedTable"] = (
+    table,
+    outletSlug
+  ) => {
     // Meja sama kayak sesi yang lagi aktif (misal reload halaman) — jangan reset
-    if (session.isScanned && session.tableNumber === table) return;
+    if (
+      session.isScanned &&
+      session.tableNumber === table &&
+      session.outletSlug === outletSlug
+    ) {
+      return;
+    }
 
     // Meja baru / beda dari sesi aktif — mulai pesanan baru dari nol
     setItems([]);
@@ -169,18 +191,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
       orderType: "dine_in",
       tableNumber: table,
       isScanned: true,
+      outletSlug,
       customerName: "",
     });
   };
 
-  const clearScannedTable: CartContextValue["clearScannedTable"] = () => {
-    // Hanya sesi hasil scan QR yang dibersihkan. Sesi yang customer pilih
-    // sendiri (Dine In / Take Away) tidak diutak-atik.
-    if (!session.isScanned) return;
+  const clearScannedTable: CartContextValue["clearScannedTable"] = (
+    outletSlug
+  ) => {
+    // Slug outlet halaman ini selalu dicatat sesi (dipakai tombol checkout).
+    if (!session.isScanned) {
+      if (session.outletSlug !== outletSlug) {
+        setSession((prev) => ({ ...prev, outletSlug }));
+      }
+      return;
+    }
 
     setSession((prev) => ({
       ...DEFAULT_SESSION,
       customerName: prev.customerName,
+      outletSlug,
     }));
   };
 

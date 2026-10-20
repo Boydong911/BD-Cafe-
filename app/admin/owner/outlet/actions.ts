@@ -134,12 +134,28 @@ export async function createOutlet(
   }
 
   revalidateOutlet();
+
+  /*
+   * Meja 1 otomatis: outlet baru langsung punya satu meja yang bisa
+   * diberi QR. Gagal di sini TIDAK membatalkan outlet — meja bisa
+   * ditambahkan manual di halaman Kelola Meja.
+   */
+  const { error: tableError } = await supabase.from("tables").insert({
+    outlet_id: outlet.id,
+    table_number: "1",
+    label: "Meja 1",
+  });
+
+  const mejaNote = tableError
+    ? "Meja 1 gagal dibuat otomatis — tambahkan manual di Kelola Meja."
+    : "Meja 1 + QR otomatis siap di Kelola Meja.";
+
   return {
     success: true,
     message:
       copied > 0
-        ? `Outlet "${parsed.data.nama}" dibuat (slug ${outlet.slug}) — ${copied} menu tersalin. Meja 1 + QR & halaman kasir outlet ini aktif di Tahap 2.`
-        : `Outlet "${parsed.data.nama}" dibuat (slug ${outlet.slug}). Meja 1 + QR & halaman kasir outlet ini aktif di Tahap 2.`,
+        ? `Outlet "${parsed.data.nama}" dibuat (slug ${outlet.slug}) — ${copied} menu tersalin. ${mejaNote} Halaman publiknya: /${outlet.slug}/menu`
+        : `Outlet "${parsed.data.nama}" dibuat (slug ${outlet.slug}). ${mejaNote} Halaman publiknya: /${outlet.slug}/menu`,
   };
 }
 

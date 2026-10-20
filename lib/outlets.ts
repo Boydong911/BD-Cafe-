@@ -58,6 +58,23 @@ export function pickOutlet(
 }
 
 /**
+ * Baca outlet berdasarkan slug (halaman pelanggan & wall kasir).
+ * `null` = slug tidak dikenal.
+ */
+export async function fetchOutletBySlug(
+  slug: string
+): Promise<OutletRow | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("outlets")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  return (data ?? null) as unknown as OutletRow | null;
+}
+
+/**
  * Slug outlet berikutnya: `outlet-b`, `outlet-c`, ... (`outlet-a` milik
  * pusat). Kalau semua huruf terpakai, lanjut angka: `outlet-1`, dst.
  *

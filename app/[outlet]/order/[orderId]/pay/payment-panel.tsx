@@ -19,15 +19,17 @@ import {
 import { AlertCircle, ArrowLeft, CheckCircle2, Clock, Loader2, Store, XCircle } from "lucide-react";
 import { confirmQrisPayment, expireOrder } from "../actions";
 import { PAYMENT_WINDOW_MINUTES } from "@/lib/payment";
-import { menuHref } from "@/lib/menu-href";
+import { outletMenuHref } from "@/lib/outlet-routes";
 import { isFromKasir } from "@/components/customer/order-source";
 
 const rupiah = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
 
 type Props =
-  | { orderId: string; state: "redirect" }
+  | { orderId: string; outletSlug: string; state: "redirect" }
   | {
       orderId: string;
+      /** Slug outlet pesanan — semua link balik mengarah ke menu/board outlet ini. */
+      outletSlug: string;
       state: "waiting" | "expired";
       method: "qris" | "cash";
       total: number;
@@ -48,8 +50,9 @@ export function PaymentPanel(props: Props) {
 
   // Mode "redirect": pesanan sudah dibayar/dibatalkan -> ke halaman antrean
   useEffect(() => {
-    if (props.state === "redirect") router.replace(`/order/${props.orderId}`);
-  }, [props.state, props.orderId, router]);
+    if (props.state === "redirect")
+      router.replace(`/${props.outletSlug}/order/${props.orderId}`);
+  }, [props.state, props.orderId, props.outletSlug, router]);
 
   if (props.state === "redirect") {
     return (
@@ -59,7 +62,17 @@ export function PaymentPanel(props: Props) {
     );
   }
 
-  const { orderId, state, method, total, customerName, tableNumber, orderType, createdAt } = props;
+  const {
+    orderId,
+    outletSlug,
+    state,
+    method,
+    total,
+    customerName,
+    tableNumber,
+    orderType,
+    createdAt,
+  } = props;
   const expired = state === "expired";
   const isCash = method === "cash";
 
@@ -81,11 +94,11 @@ export function PaymentPanel(props: Props) {
    * Dihitung sekali di sini lalu dipakai sub-komponen, supaya tidak ada
    * tempat yang lupa menempelkan nomor meja.
    *
-   * Pelanggan batal bayar -> balik ke /menu?table=XX (kalau pesanan dari meja).
+   * Pelanggan batal bayar -> balik ke menu outlet yang sama (bawa nomor meja).
    * Kasir batal bayar    -> balik ke board antrean.
    */
-  const backToMenu = menuHref(tableNumber);
-  const cancelHref = fromKasir ? "/admin/kasir" : backToMenu;
+  const backToMenu = outletMenuHref(outletSlug, tableNumber);
+  const cancelHref = fromKasir ? `/${outletSlug}/admin/kasir` : backToMenu;
 
   return (
     <div className="mx-auto max-w-md space-y-6 p-6">
@@ -102,10 +115,16 @@ export function PaymentPanel(props: Props) {
           backLabel={fromKasir ? "Kembali ke Kasir" : "Kembali ke Menu"}
         />
       ) : isCash ? (
-        <CashBox orderId={orderId} backToMenu={backToMenu} staff={fromKasir} />
+        <CashBox
+          orderId={orderId}
+          outletSlug={outletSlug}
+          backToMenu={backToMenu}
+          staff={fromKasir}
+        />
       ) : (
         <QrisBox
           orderId={orderId}
+          outletSlug={outletSlug}
           total={total}
           customerName={customerName}
           tableNumber={tableNumber}
@@ -124,17 +143,21 @@ export function PaymentPanel(props: Props) {
 
 function CashBox({
   orderId,
+  outletSlug,
   backToMenu,
   staff,
 }: {
   orderId: string;
+  outletSlug: string;
   backToMenu: string;
   staff: boolean;
 }) {
   const router = useRouter();
 
   // Tunggu kasir mengonfirmasi -> otomatis masuk ke halaman antrean
-  useRealtimePayment(orderId, () => router.replace(`/order/${orderId}`));
+  useRealtimePayment(orderId, () =>
+    router.replace(`/${outletSlug}/order/${orderId}`)
+  );
 
   return (
     <div className="space-y-5">
@@ -162,7 +185,7 @@ function CashBox({
           <Button
             variant="outline"
             className="w-full"
-            onClick={() => router.push("/admin/kasir")}
+            onClick={() => router.push(`/${outletSlug}/admin/kasir`)}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Kembali ke Kasir
@@ -172,7 +195,7 @@ function CashBox({
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => router.push(`/order/${orderId}`)}
+              onClick={() => router.push(`/${outletSlug}/order/${orderId}`)}
             >
               Lihat Detail Pesanan
             </Button>
@@ -205,6 +228,7 @@ function CashBox({
 
 function QrisBox({
   orderId,
+  outletSlug,
   total,
   customerName,
   tableNumber,
@@ -213,6 +237,7 @@ function QrisBox({
   cancelHref,
 }: {
   orderId: string;
+  outletSlug: string;
   total: number;
   customerName: string;
   tableNumber: string | null;
@@ -239,9 +264,9 @@ function QrisBox({
     fired.current = true;
     startTransition(async () => {
       await expireOrder(orderId);
-      router.replace(`/order/${orderId}`);
+      router.replace(`/${outletSlug}/order/${orderId}`);
     });
-  }, [remaining, orderId, router]);
+  }, [remaining, orderId, outletSlug, router]);
 
   // Sisa waktu dipakai sebagai penanda tambahan di payload QR
   const qrPayload = useMemo(
@@ -265,7 +290,7 @@ function QrisBox({
         setError(result.error);
         return;
       }
-      router.replace(`/order/${orderId}`);
+      router.replace(`/${outletSlug}/order/${orderId}`);
     });
   }
 

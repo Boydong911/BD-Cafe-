@@ -183,16 +183,16 @@ export function OutletManager({ outlets }: { outlets: OutletCardData[] }) {
 
       {earlyOutlet && (
         <p className="text-xs text-muted-foreground">
-          Catatan: outlet non-pusat aktif penuh di Tahap 2 (Meja 1 + QR dan
-          halaman kasir tiap outlet). Menu & karyawan outlet baru sudah bisa
-          dikelola lewat halaman Menu dan Karyawan dengan pemilih outlet.
+          Catatan: tiap outlet non-pusat kini aktif penuh — Meja 1 + QR otomatis,
+          halaman menu &amp; kasir miliknya sendiri di /outlet-x/menu dan
+          /outlet-x/admin/kasir. Menu &amp; karyawan tetap dikelola lewat halaman
+          Menu dan Karyawan dengan pemilih outlet.
         </p>
       )}
 
       {/*
-        Pintu masuk kasir per outlet. Hari ini semua tombol mengarah ke halaman
-        login kasir yang sama (datanya terpisah otomatis lewat aturan outlet);
-        mulai Tahap 2 tiap outlet mendapat URL login sendiri beserta QR-nya.
+        Pintu masuk kasir per outlet. Tiap outlet punya URL login sendiri,
+        jadi kasir outlet B tidak keharusan lewat pintu outlet A.
       */}
       {outlets.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
@@ -200,16 +200,16 @@ export function OutletManager({ outlets }: { outlets: OutletCardData[] }) {
             Login Kasir
           </h2>
           <p className="mb-3 text-sm text-muted-foreground">
-            Semua kasir login lewat halaman kasir yang sama — yang mereka lihat
-            otomatis dibatasi ke outlet tempat kerjanya. URL login khusus per
-            outlet (mis. /{outlets[0]?.slug}/login/kasir) menyusul di Tahap 2.
+            Setiap outlet punya pintu login sendiri. Setelah masuk, kasir
+            otomatis mendarat di board outlet tempatnya bekerja dan yang
+            terlihat otomatis dibatasi ke outlet itu.
           </p>
           <div className="flex flex-wrap gap-2">
             {outlets
               .filter((o) => o.is_active)
               .map((o) => (
                 <Button key={o.id} variant="outline" size="sm" asChild>
-                  <Link href="/login/kasir">
+                  <Link href={`/${o.slug}/login/kasir`}>
                     <LogIn className="mr-1.5 h-4 w-4" />
                     Login Kasir · {o.nama}
                   </Link>

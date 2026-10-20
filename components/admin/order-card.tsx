@@ -17,7 +17,7 @@ import {
 import {
   completeOrder,
   updateOrderStatus,
-} from "@/app/admin/kasir/actions";
+} from "@/app/[outlet]/admin/kasir/actions";
 import type { KasirOrder, OrderStatus } from "@/types/order";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {

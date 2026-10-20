@@ -18,11 +18,12 @@ type TableRow = Tables<"tables">;
 export function TableManager({
   initialTables,
   outletId,
-  outletIsPusat,
+  outletSlug,
 }: {
   initialTables: TableRow[];
   outletId: string;
-  outletIsPusat: boolean;
+  /** Slug outlet meja ini — dipakai template QR (/outlet-x/menu?table=N). */
+  outletSlug: string;
 }) {
   const [tables, setTables] = useState(initialTables);
   const [error, setError] = useState<string | null>(null);
@@ -100,21 +101,21 @@ export function TableManager({
                   />
                 </TableCell>
                 <TableCell>
-                  {outletIsPusat ? (
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">Lihat QR</Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogTitle>QR Meja {t.table_number}</DialogTitle>
-                        <TableQrCard tableNumber={t.table_number} label={t.label} />
-                      </DialogContent>
-                    </Dialog>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      QR outlet menyusul di Tahap 2
-                    </span>
-                  )}
+                  {/* QR per outlet: semua outlet punya menu sendiri, jadi dialog
+                      QR tampil untuk semua — tak ada lagi placeholder pusat-only */}
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">Lihat QR</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogTitle>QR Meja {t.table_number}</DialogTitle>
+                      <TableQrCard
+                        tableNumber={t.table_number}
+                        label={t.label}
+                        outletSlug={outletSlug}
+                      />
+                    </DialogContent>
+                  </Dialog>
                 </TableCell>
                 <TableCell className="text-right">
                   <Button

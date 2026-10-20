@@ -7,6 +7,7 @@ import { Minus, Plus, ShoppingBag, ImageOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useCart, type SelectedCustomization } from "@/lib/cart/cart-context";
 import type { CustomizationGroup } from "@/types/menu";
+import { outletMenuDetailHref } from "@/lib/outlet-routes";
 
 export type MenuCardItem = {
   id: string;
@@ -44,13 +45,18 @@ const WRAP =
 export function MenuCard({
   item,
   tableParam,
+  outletSlug,
   orderable,
 }: {
   item: MenuCardItem;
   tableParam: string | null;
+  /** Slug outlet tempat katalog ini berdiri — URL detail ikut menyimpannya. */
+  outletSlug: string;
   orderable?: boolean;
 }) {
-  const href = tableParam ? `/menu/${item.id}?table=${tableParam}` : null;
+  const href = tableParam
+    ? outletMenuDetailHref(outletSlug, item.id, tableParam)
+    : null;
   const canOrder = orderable ?? tableParam !== null;
 
   return (

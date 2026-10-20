@@ -55,7 +55,7 @@ export default async function MejaPage({
       <TableManager
         initialTables={tables ?? []}
         outletId={outlet.id}
-        outletIsPusat={outlet.is_pusat}
+        outletSlug={outlet.slug}
       />
     </div>
   );

@@ -28,12 +28,15 @@ function SubmitButton() {
 }
 
 /**
- * Pendaftaran karyawan baru (`/daftar`).
+ * Pendaftaran karyawan baru (`/daftar` ber-outlet, mis. /outlet-a/daftar).
  *
- * Terbuka dari halaman login kasir. Setelah daftar, akun langsung dipakai —
- * pemohon langsung masuk ke dashboard kasir tanpa mengetik ulang password.
+ * Terbuka dari halaman login kasir outlet yang sama. Slot outlet dikirim
+ * sebagai input tersembunyi — server memvalidasi ulang slug-nya, jadi
+ * isian ini bukan keputusan keamanan, hanya konteks.
+ * Setelah daftar, akun langsung dipakai — pemohon langsung masuk ke
+ * dashboard kasir tanpa mengetik ulang password.
  */
-export default function DaftarForm() {
+export default function DaftarForm({ outletSlug }: { outletSlug: string }) {
   const [state, formAction] = useActionState(daftarAction, initialState);
 
   return (
@@ -45,13 +48,15 @@ export default function DaftarForm() {
             <CardTitle>Daftar Karyawan Baru</CardTitle>
           </div>
           <CardDescription>
-            Isi data di bawah. Akun langsung aktif dan kamu langsung masuk ke
-            dashboard kasir.
+            Daftar sebagai kasir outlet <b>/{outletSlug}</b>. Isi data di bawah.
+            Akun langsung aktif dan kamu langsung masuk ke dashboard kasir.
           </CardDescription>
         </CardHeader>
 
         <CardContent>
           <form action={formAction} className="space-y-4">
+            {/* Outlet tempat pendaftaran — baca ulang & divalidasi di server action */}
+            <input type="hidden" name="outlet_slug" value={outletSlug} />
             <div className="space-y-2">
               <Label htmlFor="full_name">Nama Lengkap</Label>
               <Input
@@ -117,7 +122,7 @@ export default function DaftarForm() {
 
           <div className="mt-4 border-t pt-4">
             <Button asChild variant="ghost" className="w-full">
-              <Link href="/login/kasir">
+              <Link href={`/${outletSlug}/login/kasir`}>
                 <ArrowLeft className="mr-1.5 h-4 w-4" />
                 Kembali ke login kasir
               </Link>

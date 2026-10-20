@@ -169,7 +169,42 @@ export async function kasirLoginAction(
     return { error: result.error ?? "Username atau password salah." };
   }
 
-  redirect("/admin/kasir");
+  /*
+   * Kasir mendarat di board outlet-nya sendiri.
+   *
+   * Seat "kasir" sudah membawa sesi baru dari signInWithPassword, jadi lewat
+   * satu query ringan kita bisa tahu outlet_id profil dan slug outletnya.
+   * Kalau lookup gagal (RLS, jaringan), jatuh ke URL legacy /admin/kasir —
+   * middleware tetap menuntunnya ke board outlet pusat, jadi tidak pernah
+   * ada 404.
+   */
+  let target = "/admin/kasir";
+  const supabase = await createClient("kasir");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, outlet_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.role === "kasir" && profile.outlet_id) {
+      const { data: assignedOutlet } = await supabase
+        .from("outlets")
+        .select("slug, is_active")
+        .eq("id", profile.outlet_id)
+        .maybeSingle();
+
+      if (assignedOutlet?.slug && assignedOutlet.is_active !== false) {
+        target = `/${assignedOutlet.slug}/admin/kasir`;
+      }
+    }
+  }
+
+  redirect(target);
 }
 
 async function signOutThenRedirect(target: "/login" | "/login/kasir", seat: Seat) {

@@ -1,25 +1,33 @@
 import { kasirLogoutAction } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
+import { fetchOutletBySlug } from "@/lib/outlets";
 
-export default function KasirLayout({
+export default async function KasirLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<{ outlet: string }>;
 }) {
+  // Nama outlet ditampilkan di header supaya kasir selalu tahu dia berdiri
+  // di board outlet mana — penting saat owner buka beberapa outlet sekaligus.
+  const { outlet: slug } = await params;
+  const outlet = await fetchOutletBySlug((slug ?? "").toLowerCase());
+
   return (
     <div className="min-h-dvh bg-muted/30">
       <header className="sticky top-0 z-20 border-b bg-primary text-primary-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <div>
             <p className="font-serif text-lg font-semibold leading-tight">
-              BD Cafe
+              BD Cafe{outlet ? ` · ${outlet.nama}` : ""}
             </p>
             <p className="text-xs opacity-80">Dashboard Kasir</p>
           </div>
           {/*
             kasirLogoutAction, bukan logoutAction yang biasa dipakai sidebar
             owner: halaman ini untuk kasir, jadi keluar dari sini harus balik
-            ke /login/kasir -- apa pun role akun yang sedang dipakai.
+            ke login kasir -- apa pun role akun yang sedang dipakai.
           */}
           <form action={kasirLogoutAction}>
             {/*

@@ -1,3 +1,7 @@
+// File: app/[outlet]/admin/kasir/actions.ts
+// DIPINDAH dari app/admin/kasir/actions.ts — board kini ber-outlet, jadi
+// action-nya ikut pindah bersama page-nya (import di order-card mengikuti).
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -98,6 +102,7 @@ export async function updateOrderStatus(
   if (error) return { success: false, error: "Gagal memperbarui status." };
 
   revalidatePath("/admin/kasir");
+  revalidatePath("/[outlet]/admin/kasir", "page");
   return { success: true };
 }
 
@@ -228,6 +233,7 @@ export async function confirmPayment(
   revalidatePath("/admin/kasir");
   revalidatePath("/admin/owner");
   revalidatePath("/admin/owner/penjualan");
+  revalidatePath("/[outlet]/admin/kasir", "page");
   return { success: true };
 }
 
@@ -241,7 +247,7 @@ export async function confirmPayment(
  *             memberi nomor antrean) -> ready -> completed
  *   QRIS   -> pembayaran sudah lunas dari sisi pelanggan -> ready -> completed
  *
- * Status tetap dikrok dua tahap (ready lalu completed), bukan langsung
+ * Status tetap dibuat dua tahap (ready lalu completed), bukan langsung
  * completed, supaya pesanan sempat terlihat sebagai "Siap Disajikan" di
  * halaman pelanggan. Kalau langsung completed, pelanggan tidak pernah melihat
  * tahap itu.
@@ -343,5 +349,6 @@ export async function completeOrder(orderId: string): Promise<ActionResult> {
   revalidatePath("/admin/kasir");
   revalidatePath("/admin/owner");
   revalidatePath("/admin/owner/penjualan");
+  revalidatePath("/[outlet]/admin/kasir", "page");
   return { success: true };
 }

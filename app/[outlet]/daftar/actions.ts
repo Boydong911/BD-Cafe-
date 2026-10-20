@@ -4,6 +4,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { fetchOutletBySlug } from "@/lib/outlets";
 import { loginWithPassword } from "./helpers";
 
 export type DaftarState = {
@@ -61,15 +62,37 @@ export async function daftarAction(
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
   }
 
+  /*
+   * Outlet tempat pendaftaran berasal dari slot tersembunyi di form
+   * (nilai slug dari URL). Slot itu BUKAN keputusan keamanan — pelanggan
+   * bisa mengeditnya — karena itu slug divalidasi ulang di sini: kalau
+   * slug tidak dikenal atau outlet tutup, pendaftaran ditolak.
+   */
+  const outletSlugRaw = String(formData.get("outlet_slug") ?? "")
+    .trim()
+    .toLowerCase();
+  const outlet = await fetchOutletBySlug(outletSlugRaw);
+  if (!outlet) {
+    return {
+      error:
+        "Outlet tidak dikenal. Gunakan link pendaftaran dari outlet yang benar.",
+    };
+  }
+  if (outlet.is_active === false) {
+    return { error: `Outlet "${outlet.nama}" sedang tidak aktif.` };
+  }
+
   const supabase = await createClient("kasir");
 
   // Pakai register_staff_account(), bukan create_staff_account(). Yang latter
   // hanya bisa dipanggil owner; ini halaman publik, jadi pakai function
-  // khusus yang role-nya di-hardcode 'kasir' di dalam SQL.
+  // khusus yang role-nya di-hardcode 'kasir' di dalam SQL. p_outlet_id
+  // mengikat akun baru ke outlet ini (lihat fondasi multi-outlet).
   const { error } = await supabase.rpc("register_staff_account", {
     p_username: parsed.data.username,
     p_password: parsed.data.password,
     p_full_name: parsed.data.full_name,
+    p_outlet_id: outlet.id,
   });
 
   if (error) {
@@ -87,5 +110,6 @@ export async function daftarAction(
     };
   }
 
-  redirect("/admin/kasir");
+  // Mendarat di board outlet tempat pendaftaran — bukan board pusat.
+  redirect(`/${outlet.slug}/admin/kasir`);
 }

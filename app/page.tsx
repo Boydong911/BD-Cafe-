@@ -33,9 +33,28 @@ type RawMenuRow = {
 async function getShowcaseMenu(): Promise<ShowcaseMenuItem[]> {
   const supabase = await createClient();
 
+  /*
+   * Showcase landing menuju menu PUSAT saja.
+   *
+   * Sejak menu jadi per outlet (Tahap 2), tabel menu_items punya salinan
+   * untuk tiap outlet — tanpa filter, landing menampilkan menu dua kali
+   * (salinan outlet A dan outlet B). Landing merepresentasikan "BD Cafe"
+   * kini, jadi yang dipajang menu outlet pusat; outlet lain punya halaman
+   * menunya sendiri.
+   */
+  const { data: pusat } = await supabase
+    .from("outlets")
+    .select("id")
+    .eq("is_pusat", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (!pusat) return [];
+
   const { data, error } = await supabase
     .from("menu_items")
     .select("id, name, price, image_url, is_available, categories(name)")
+    .eq("outlet_id", pusat.id)
     .eq("is_available", true);
 
   if (error || !data) return [];
