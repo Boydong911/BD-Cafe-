@@ -5,7 +5,12 @@ import { seatAuthOptions } from "@/lib/supabase/seats";
 
 // Seat menentukan cookie mana yang dipakai (lihat lib/supabase/seats.ts).
 // Middleware menerima seat dari middleware.ts, yang memilihnya dari pathname.
-export function createMiddlewareClient(request: NextRequest, seat: Seat = "owner") {
+// Seat kasir per outlet: slug dioper agar nama key cookie-nya spesifik outlet.
+export function createMiddlewareClient(
+  request: NextRequest,
+  seat: Seat = "owner",
+  outletSlug?: string | null
+) {
   let response = NextResponse.next({
     request,
   })
@@ -28,7 +33,7 @@ export function createMiddlewareClient(request: NextRequest, seat: Seat = "owner
           )
         },
       },
-      ...seatAuthOptions(seat),
+      ...seatAuthOptions(seat, outletSlug),
     }
   )
 

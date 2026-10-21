@@ -1,5 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import type { Database } from "@/types/database.types";
 import type { Seat } from "@/lib/supabase/seats";
 import { seatAuthOptions } from "@/lib/supabase/seats";
@@ -20,6 +20,21 @@ import { seatAuthOptions } from "@/lib/supabase/seats";
 export async function createClient(seat: Seat = "owner") {
   const cookieStore = await cookies();
 
+  /*
+   * Seat kasir kini PER OUTLET: outlet dibaca dari header internal
+   * `x-bd-outlet` yang disuntik middleware untuk semua jalur ber-outlet.
+   * Header kosong (jalur tanpa outlet) -> nama key global pola lama.
+   */
+  let outletSlug: string | null = null;
+  if (seat === "kasir") {
+    try {
+      outletSlug = (await headers()).get("x-bd-outlet");
+    } catch {
+      // Di luar konteks request (mis. saat build) — pakai key global.
+      outletSlug = null;
+    }
+  }
+
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -39,7 +54,7 @@ export async function createClient(seat: Seat = "owner") {
           }
         },
       },
-      ...seatAuthOptions(seat),
+      ...seatAuthOptions(seat, outletSlug),
     }
   );
 }

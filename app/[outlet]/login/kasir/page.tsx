@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { fetchOutletBySlug } from "@/lib/outlets";
 import KasirLoginForm from "./kasir-login-form";
 
 export const metadata: Metadata = {
@@ -11,6 +13,9 @@ export const metadata: Metadata = {
  *
  * Kini pintu ini per outlet: /outlet-a/login/kasir, /outlet-b/login/kasir.
  * URL lama /login/kasir otomatis dilompatkan middleware ke outlet pusat.
+ *
+ * Slug tidak dikenal -> 404, senada dengan board kasir: jangan sampai
+ * muncul pintu login untuk outlet yang tidak pernah ada.
  */
 export default async function OutletKasirLoginPage({
   params,
@@ -22,6 +27,9 @@ export default async function OutletKasirLoginPage({
 }) {
   const [{ outlet: slug }, { notice }] = await Promise.all([params, searchParams]);
 
+  const outlet = await fetchOutletBySlug((slug ?? "").toLowerCase());
+  if (!outlet) notFound();
+
   /*
    * `notice` dioper sebagai KODE dari app/login/actions.ts (server action
    * login owner memindahkan akun kasir ke sini). Teks diambil dari daftar
@@ -30,6 +38,13 @@ export default async function OutletKasirLoginPage({
    */
   const TANDA: Record<string, string> = {
     "bukan-owner": "Anda bukan Owner, Silahkan segera tutup halaman ini",
+    /*
+     * Gerbang penugasan (ketat): kasir outlet lain mencoba login di pintu
+     * ini — sesinya dilepah dan dia diarahkan ke pintu outlet tugasnya;
+     * halaman inilah pindahannya.
+     */
+    "pintu-lain":
+      "Kamu ditugaskan di outlet lain. Gunakan pintu masuk outlet tugasmu.",
   };
 
   return (

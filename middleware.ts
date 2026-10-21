@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createMiddlewareClient } from "@/lib/supabase/middleware";
 import type { Seat } from "@/lib/supabase/seats";
+import { legacyKasirStorageKey } from "@/lib/supabase/seats";
 import { PUSAT_SLUG, isOutletSlug } from "@/lib/outlet-routes";
 
 /*
@@ -73,17 +74,28 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const { supabase, response } = createMiddlewareClient(
-    request,
-    seatForPath(pathname)
-  );
+  // Slug outlet jalur ini (null di jalur non-outlet).
+  const prefix = outletPrefix(pathname);
+
+  /*
+   * Suntikkan header internal `x-bd-outlet` ke request yang mengalir ke
+   * Server Component / Server Action, supaya createClient("kasir") tahu
+   * KEY cookie sesi outlet mana yang harus dibaca/tulis. Nilainya hanyalah
+   * slug dari URL — bukan keputusan keamanan; penugasan tetap dicek dari
+   * profil (RLS + gerbang di halaman board).
+   */
+  if (prefix) {
+    request.headers.set("x-bd-outlet", prefix);
+  }
+
+  const seat = seatForPath(pathname);
+  const { supabase, response } = createMiddlewareClient(request, seat, prefix);
 
   // Wajib dipanggil supaya session ter-refresh (jangan dihapus).
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const prefix = outletPrefix(pathname);
   const outletBoardPath = prefix ? `${prefix}/admin/kasir` : null;
   const pathnameKasirBoard =
     pathname.startsWith("/admin/kasir") ||
@@ -151,8 +163,21 @@ export async function middleware(request: NextRequest) {
       kemudian balik ke outlet pusat, jadi tidak ada loop.
     */
     if (isLoginRoute) {
-      const target = profile.role === "owner" ? "/admin/owner" : "/admin/kasir";
-      return NextResponse.redirect(new URL(target, request.url));
+      if (profile.role === "owner") {
+        return NextResponse.redirect(new URL("/admin/owner", request.url));
+      }
+      /*
+       * Kasir yang sudah punya sesi membuka halaman login -> langsung ke
+       * board. Sesi kasir kini per outlet: yang terbaca di pintu ini pasti
+       * sesi yang login lewat pintu outlet yang sama, jadi board outlet
+       * ini yang tepat (tanpa memicu dinding penugasan).
+       */
+      if (prefix) {
+        return NextResponse.redirect(
+          new URL(`/${prefix}/admin/kasir`, request.url)
+        );
+      }
+      return NextResponse.redirect(new URL("/admin/kasir", request.url));
     }
 
     // Cegah kasir mengakses area khusus owner, dan sebaliknya.
@@ -166,6 +191,16 @@ export async function middleware(request: NextRequest) {
     if (pathnameKasirBoard && profile.role !== "kasir" && profile.role !== "owner") {
       return NextResponse.redirect(new URL("/admin/owner", request.url));
     }
+  }
+
+  /*
+   * Bersih-bersih cookie seat kasir POLA LAMA (nama global, satu untuk semua
+   * outlet). Kini tiap outlet punya key sendiri dan yang global tidak dibaca
+   * lagi — hapus sekali jalan kalau masih nyangkut di peramban.
+   */
+  const legacyKey = legacyKasirStorageKey();
+  if (seat === "kasir" && prefix && request.cookies.has(legacyKey)) {
+    response.cookies.set(legacyKey, "", { path: "/", maxAge: 0 });
   }
 
   return response;

@@ -17,13 +17,13 @@ import { seatAuthOptions } from "@/lib/supabase/seats";
  * kedua tidak pernah kepakai. Tidak ada caching client antar seat; tiap
  * pemanggilan membuat instance baru (pemanggilannya sedikit, satu per efek).
  */
-export function createClient(seat: Seat = "owner") {
+export function createClient(seat: Seat = "owner", outletSlug?: string | null) {
   return createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       isSingleton: false,
-      ...seatAuthOptions(seat),
+      ...seatAuthOptions(seat, outletSlug),
     }
   );
 }

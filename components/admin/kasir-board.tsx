@@ -128,8 +128,9 @@ export function KasirBoard({
    * menunggu di kasir tanpa kabar.
    */
   useEffect(() => {
-    // Seat kasir: JWT yang dipakai realtime & polling harus milik sesi kasir.
-    const supabase = createClient("kasir");
+    // Seat kasir: JWT yang dipakai realtime & polling harus milik sesi kasir
+    // outlet ini (key cookie per outlet).
+    const supabase = createClient("kasir", outletSlug);
     let debounce: ReturnType<typeof setTimeout> | undefined;
 
     const refresh = () => {

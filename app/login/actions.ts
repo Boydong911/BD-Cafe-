@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import type { Seat } from "@/lib/supabase/seats";
 
@@ -170,6 +171,19 @@ export async function kasirLoginAction(
   }
 
   /*
+   * Slug outlet pintu login ini (dari middleware, header internal).
+   * Ini dasar gerbang penugasan: kasir hanya boleh masuk lewat pintu
+   * outlet tugasnya. Kalau header tidak ada (jalur legacy yang sudah
+   * diarahkan middleware), gerbang dilewati — perilaku lama.
+   */
+  let loginOutletSlug: string | null = null;
+  try {
+    loginOutletSlug = (await headers()).get("x-bd-outlet")?.toLowerCase() ?? null;
+  } catch {
+    loginOutletSlug = null;
+  }
+
+  /*
    * Kasir mendarat di board outlet-nya sendiri.
    *
    * Seat "kasir" sudah membawa sesi baru dari signInWithPassword, jadi lewat
@@ -191,23 +205,69 @@ export async function kasirLoginAction(
       .eq("id", user.id)
       .maybeSingle();
 
-    if (profile?.role === "kasir" && profile.outlet_id) {
+    if (!profile) {
+      /*
+       * Terautentikasi tapi tidak punya profil staf — lepah sesi supaya
+       * tidak nyangkut di seat ini, lalu minta dia bertanya ke owner.
+       */
+      await supabase.auth.signOut({ scope: "local" });
+      return { error: "Akun ini tidak punya profil staf. Hubungi owner." };
+    }
+
+    if (profile.role === "kasir") {
+      if (!profile.outlet_id) {
+        await supabase.auth.signOut({ scope: "local" });
+        return {
+          error: "Akun ini belum ditugaskan ke outlet mana pun. Hubungi owner.",
+        };
+      }
+
       const { data: assignedOutlet } = await supabase
         .from("outlets")
         .select("slug, is_active")
         .eq("id", profile.outlet_id)
         .maybeSingle();
 
-      if (assignedOutlet?.slug && assignedOutlet.is_active !== false) {
-        target = `/${assignedOutlet.slug}/admin/kasir`;
+      /*
+       * GERBANG PENUGASAN (ketat): kasir outlet B yang login di pintu outlet
+       * A ditolak. Sesi yang barusan dibuat langsung dilepah (scope local =
+       * hanya cookie seat outlet pintu ini), lalu dia diarahkan ke pintu
+       * outlet tugasnya dengan tanda `notice` berkode.
+       */
+      if (
+        assignedOutlet?.slug &&
+        loginOutletSlug &&
+        assignedOutlet.slug !== loginOutletSlug
+      ) {
+        await supabase.auth.signOut({ scope: "local" });
+        redirect(`/${assignedOutlet.slug}/login/kasir?notice=pintu-lain`);
       }
+
+      if (!assignedOutlet?.slug || assignedOutlet.is_active === false) {
+        await supabase.auth.signOut({ scope: "local" });
+        return {
+          error:
+            "Outlet tugasmu tidak ditemukan atau sedang diarsipkan. Hubungi owner.",
+        };
+      }
+
+      target = `/${assignedOutlet.slug}/admin/kasir`;
+    } else if (profile.role === "owner") {
+      /*
+       * Owner lewat pintu kasir: mendarat di board outlet pintu ini (dia
+       * memang membuka pintu itu). Jalur legacy tanpa outlet jatuh ke
+       * /admin/kasir yang dituntun middleware ke board pusat.
+       */
+      target = loginOutletSlug
+        ? `/${loginOutletSlug}/admin/kasir`
+        : "/admin/kasir";
     }
   }
 
   redirect(target);
 }
 
-async function signOutThenRedirect(target: "/login" | "/login/kasir", seat: Seat) {
+async function signOutThenRedirect(target: string, seat: Seat) {
   const supabase = await createClient(seat);
   /*
    * scope "local": hanya sesi di seat INI yang dicabut -- sesi milik seat
@@ -234,10 +294,20 @@ export async function logoutAction() {
 /**
  * Keluar dari sesi dari DASHBOARD KASIR.
  *
- * Seat "kasir": sesi yang dilepah hanya cookie kasir. Sesi dashboard owner
- * di seat lain tidak tersentuh — itulah tujuan pemisahan seat: kasir boleh
- * keluar/masuk tanpa mengganggu owner di peramban yang sama.
+ * Seat "kasir" PER OUTLET: sesi yang dilepah hanya cookie kasir OUTLET INI
+ * (dari header `x-bd-outlet` — tombol logout memang hanya ada di board
+ * outlet). Board outlet lain di tab sebelah tidak tersentuh, begitu juga
+ * sesi dashboard owner di seat lain.
  */
 export async function kasirLogoutAction() {
-  return signOutThenRedirect("/login/kasir", "kasir");
+  let outletSlug: string | null = null;
+  try {
+    outletSlug = (await headers()).get("x-bd-outlet");
+  } catch {
+    outletSlug = null;
+  }
+  return signOutThenRedirect(
+    outletSlug ? `/${outletSlug}/login/kasir` : "/login/kasir",
+    "kasir"
+  );
 }
