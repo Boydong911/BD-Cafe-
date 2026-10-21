@@ -93,7 +93,9 @@ export default async function StaffPage({
         <OutletPicker outlets={outlets} currentSlug={outlet.slug} />
       </div>
 
+      {/* `key={outlet.id}`: cegah daftar karyawan & default outlet form basi saat ganti outlet. */}
       <StaffManager
+        key={outlet.id}
         staff={staff}
         currentUserId={user.id}
         outlets={activeOutlets}

@@ -76,7 +76,18 @@ export default async function OwnerMenuPage({
 
       {error && <p className="text-sm text-destructive">Gagal memuat menu: {error.message}</p>}
 
-      <MenuTable items={menuItems} groups={categoryGroups} outletSlug={outlet.slug} />
+      {/*
+        `key={outlet.id}` WAJIB: tanpa itu, ganti outlet lewat pemilih outlet
+        tidak membuat ulang MenuTable — state `rows` di dalamnya masih berisi
+        menu outlet SEBELUMNYA (useState hanya mengisi state saat mount), jadi
+        toggle stok/hapus bisa mendarat di menu milik outlet lain.
+      */}
+      <MenuTable
+        key={outlet.id}
+        items={menuItems}
+        groups={categoryGroups}
+        outletSlug={outlet.slug}
+      />
     </div>
   );
 }

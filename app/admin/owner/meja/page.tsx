@@ -52,7 +52,9 @@ export default async function MejaPage({
         <OutletPicker outlets={outlets} currentSlug={outlet.slug} />
       </div>
 
+      {/* `key={outlet.id}`: cegah daftar meja basi saat ganti outlet (lihat menu/page.tsx). */}
       <TableManager
+        key={outlet.id}
         initialTables={tables ?? []}
         outletId={outlet.id}
         outletSlug={outlet.slug}

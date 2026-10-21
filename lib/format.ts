@@ -191,3 +191,17 @@ export function parsePeriod(
     ? raw
     : fallback;
 }
+
+/** Tanggal & jam WIB untuk kolom tabel: `21 Okt 2026, 14.05`. */
+export function formatWibDateTime(value: string | Date): string {
+  const date = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("id-ID", {
+    timeZone: WIB,
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
