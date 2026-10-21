@@ -29,6 +29,9 @@ const navItems = [
   { href: "/admin/owner/meja", label: "Meja", icon: Grid3x3 },
   { href: "/admin/owner/karyawan", label: "Karyawan", icon: Users },
   { href: "/admin/owner/outlet", label: "Outlet", icon: Store },
+  // Keinginan owner: Pengaturan & Keluar tepat di bawah Outlet, bukan
+  // mengambang di dasar sidebar yang harus digulir dulu.
+  { href: "/admin/owner/pengaturan", label: "Pengaturan", icon: Settings },
 ];
 
 /**
@@ -117,24 +120,9 @@ export function OwnerSidebar({ ownerName }: { ownerName?: string | null }) {
               </Link>
             );
           })}
-        </nav>
 
-        {/* Area bawah menempel di sidebar, tidak ikut menjauh saat digulir. */}
-        <div className="shrink-0 space-y-1 border-t border-white/10 px-3 py-3">
-          <Link
-            href="/admin/owner/pengaturan"
-            onClick={() => setOpen(false)}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-              pathname.startsWith("/admin/owner/pengaturan")
-                ? "bg-accent text-accent-foreground"
-                : "text-primary-foreground/70 hover:bg-white/10 hover:text-primary-foreground"
-            )}
-          >
-            <Settings className="h-4 w-4" />
-            Pengaturan
-          </Link>
-
+          {/* Keluar mengikuti Pengaturan — langsung di bawah Outlet, tanpa
+              perlu menggulir sampai dasar sidebar. */}
           <form action={logoutAction}>
             <button
               type="submit"
@@ -144,16 +132,19 @@ export function OwnerSidebar({ ownerName }: { ownerName?: string | null }) {
               Keluar
             </button>
           </form>
+        </nav>
 
-          {ownerName && (
-            <p className="px-3 pt-3 text-xs text-primary-foreground/40">
+        {/* Nama akun tetap menempel di dasar sidebar. */}
+        {ownerName && (
+          <div className="shrink-0 border-t border-white/10 px-6 py-3">
+            <p className="text-xs text-primary-foreground/40">
               Masuk sebagai{" "}
               <span className="font-medium text-primary-foreground/60">
                 {ownerName}
               </span>
             </p>
-          )}
-        </div>
+          </div>
+        )}
       </aside>
     </>
   );
