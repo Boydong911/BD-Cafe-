@@ -42,8 +42,41 @@ npx supabase gen types typescript --project-id <project-id> > types/database.typ
 ```bash
 npm run dev
 ```
-- Customer: `http://localhost:3000/?table=05`
-- Login staff: `http://localhost:3000/login`
+- Customer: `http://localhost:3000/outlet-a/menu?table=05` — outlet pusat;
+  jalur lama tanpa slug (`/menu?table=05`, dll.) otomatis diarahkan ke sana
+- Login owner: `http://localhost:3000/login`
+- Login kasir outlet: `http://localhost:3000/outlet-a/login/kasir`
+- Dashboard owner: `http://localhost:3000/admin/owner`
+
+## 6. URL & Outlet (multi-outlet)
+
+| Jalur | Untuk apa |
+|---|---|
+| `/{slug}/menu?table=05` | halaman pelanggan outlet itu (slug mengikuti QR meja) |
+| `/{slug}/login/kasir` | pintu login kasir outlet itu |
+| `/{slug}/daftar` | daftar akun kasir outlet itu |
+| `/{slug}/admin/kasir` | papan kasir outlet itu |
+| `/admin/owner/*` | dashboard owner (pemilih outlet di bilah samping) |
+| `/login` | pintu login owner |
+
+Aturan yang perlu diingat:
+
+- **Slug beku**: dibuat otomatis sekali (`outlet-a`, `outlet-b`, ...) dan tidak
+  pernah diubah karena tercetak di QR meja. Nama outlet bebas diedit kapan saja.
+- Jalur lama tanpa slug (`/menu`, `/login/kasir`, `/daftar`, `/admin/kasir`)
+  otomatis diarahkan ke outlet pusat — QR yang sudah tercetak tetap jalan.
+- **Satu akun kasir = tepat satu outlet.** Kasir outlet B yang mencoba login di
+  pintu outlet A ditolak dan diarahkan ke pintu outlet tugasnya. Pemindahan
+  kasir antar outlet dilakukan lewat dashboard owner.
+- Dalam satu browser, **tiap outlet menyimpan sesi kasirnya sendiri**: dua tab
+  yang membuka papan kasir outlet berbeda bisa login/logout secara mandiri;
+  board satu tidak mengganggu yang lain, begitu pula sesi owner.
+- Mengelola outlet (tambah, edit nama/tanggal bangun, arsip, pindah kasir):
+  dashboard owner → **Outlet**. Saat outlet "salinan" dibuat, menu pusat
+  difotokopi jadi milik outlet itu, dan **Meja 1 + QR siap cetak** dibuat
+  otomatis.
+- Laporan penjualan mengikuti pemilih outlet; posisi **Semua Outlet**
+  menggabungkan semua outlet (tabel pesanan menandai outlet-nya).
 
 ## Alur singkat yang sudah diimplementasikan di paket ini
 - `middleware.ts` — proteksi semua route `/admin/*`, redirect otomatis sesuai role.
@@ -51,9 +84,11 @@ npm run dev
   `get_login_email`), password diverifikasi oleh Supabase Auth (bcrypt).
 - `app/admin/owner/menu/actions.ts` — create/update/delete menu + upload foto ke
   Supabase Storage bucket `menu-images`.
-- `app/checkout/actions.ts` — Server Action checkout: validasi ulang harga & stok
-  dari database (tidak percaya harga dari client), insert `orders` + `order_items`.
-- `app/order/[orderId]/` — bukti pesanan + status realtime via `supabase-js` Realtime.
+- `app/[outlet]/checkout/actions.ts` — Server Action checkout: validasi ulang
+  harga & stok dari database (tidak percaya harga dari client),
+  insert `orders` + `order_items`; outlet ikut tertanam dari meja QR.
+- `app/[outlet]/order/[orderId]/` — bukti pesanan + status realtime via
+  `supabase-js` Realtime.
 - `supabase/sql-editor/` — prosedur menjalankan SQL, file cek kesehatan,
   dan install database baru (tabel, RLS, function laporan
   `get_sales_report` / `get_top_menu`).

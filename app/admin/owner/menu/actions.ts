@@ -150,7 +150,7 @@ export async function createMenuItem(
   }
 
   revalidatePath("/admin/owner/menu");
-  revalidatePath("/menu");
+  revalidatePath("/[outlet]/menu", "page");
   redirect(`/admin/owner/menu?outlet=${targetOutlet.slug}`);
 }
 
@@ -222,8 +222,8 @@ export async function updateMenuItem(
   }
 
   revalidatePath("/admin/owner/menu");
-  revalidatePath(`/menu/${menuId}`);
-  revalidatePath("/menu");
+  revalidatePath("/[outlet]/menu/[id]", "page");
+  revalidatePath("/[outlet]/menu", "page");
   redirect(
     outletSlug ? `/admin/owner/menu?outlet=${outletSlug}` : "/admin/owner/menu"
   );
@@ -238,7 +238,7 @@ export async function deleteMenuItem(menuId: string) {
   }
 
   revalidatePath("/admin/owner/menu");
-  revalidatePath("/menu");
+  revalidatePath("/[outlet]/menu", "page");
 }
 
 export async function toggleMenuStock(menuId: string, isAvailable: boolean) {
@@ -253,5 +253,5 @@ export async function toggleMenuStock(menuId: string, isAvailable: boolean) {
   }
 
   revalidatePath("/admin/owner/menu");
-  revalidatePath("/menu");
+  revalidatePath("/[outlet]/menu", "page");
 }

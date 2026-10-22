@@ -68,9 +68,9 @@ export async function confirmQrisPayment(orderId: string): Promise<ActionResult>
     };
   }
 
-  revalidatePath(`/order/${orderId}`);
-  revalidatePath(`/order/${orderId}/pay`);
-  revalidatePath("/admin/kasir");
+  revalidatePath("/[outlet]/order/[orderId]", "page");
+  revalidatePath("/[outlet]/order/[orderId]/pay", "page");
+  revalidatePath("/[outlet]/admin/kasir", "page");
   return { success: true };
 }
 
@@ -88,9 +88,9 @@ export async function expireOrder(orderId: string): Promise<ActionResult> {
 
   if (error) return { success: false, error: "Gagal membatalkan pesanan." };
 
-  revalidatePath(`/order/${orderId}`);
-  revalidatePath(`/order/${orderId}/pay`);
-  revalidatePath("/admin/kasir");
+  revalidatePath("/[outlet]/order/[orderId]", "page");
+  revalidatePath("/[outlet]/order/[orderId]/pay", "page");
+  revalidatePath("/[outlet]/admin/kasir", "page");
 
   return ok
     ? { success: true }
@@ -130,8 +130,8 @@ export async function getPaymentState(orderId: string) {
 
   if (expired) {
     await callBooleanRpc(supabase, "cancel_unpaid_order", orderId);
-    revalidatePath(`/order/${orderId}`);
-    revalidatePath("/admin/kasir");
+    revalidatePath("/[outlet]/order/[orderId]", "page");
+    revalidatePath("/[outlet]/admin/kasir", "page");
   }
 
   return { expired };

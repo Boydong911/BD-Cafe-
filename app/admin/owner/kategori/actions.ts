@@ -48,7 +48,7 @@ function revalidateCategories() {
   revalidatePath("/admin/owner/kategori");
   revalidatePath("/admin/owner/menu");
   revalidatePath("/admin/owner/menu/new");
-  revalidatePath("/menu");
+  revalidatePath("/[outlet]/menu", "page");
 }
 
 export async function createCategory(formData: FormData): Promise<ActionResult> {

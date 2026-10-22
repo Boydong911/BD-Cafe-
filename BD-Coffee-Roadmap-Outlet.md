@@ -1,6 +1,6 @@
 # BD Coffee — Roadmap Multi-Outlet
 
-Dibuat: 20 Okt 2026 · Versi: 1.0 FINAL · Status: siap dibangun, menunggu mulainya Tahap 1.
+Dibuat: 20 Okt 2026 · Versi: 1.1 · Status: TAMAT — Tahap 1, 2, 3 selesai & diuji (21–22 Okt 2026).
 File ini acuan kerja resmi. Setelah memasuki agent build, salinan resmi ditaruh di
 `cafe-app/BD-Coffee-Roadmap-Outlet.md` (root repo) + commit; tahap selesai centang bagian 6.
 
@@ -124,6 +124,9 @@ Pagar kecil yang ikut tercatat:
 
 ## 6. Riwayat kemajuan
 
-- [ ] **Tahap 1** — pondasi DB + manajer outlet owner
-- [ ] **Tahap 2** — URL outlet + kasir per outlet + Meja 1/QR + menu pelanggan
-- [ ] **Tahap 3** — laporan & perapihan
+- [x] **Tahap 1** — pondasi DB + manajer outlet owner (diuji 20–21 Okt 2026: buat outlet salinan/sendiri, arsip, kasir lama tetap bekerja)
+- [x] **Tahap 2** — URL outlet + kasir per outlet + Meja 1/QR + menu pelanggan (diuji 21 Okt: QR → menu per outlet, menu jus alpukat outlet B tidak bocor ke A, pembelian Tunai & QRIS dua outlet)
+  - tambahan setelah uji: sesi kasir jadi **per outlet** (cookie `sb-…-kasir-<slug>`) supaya dua tab board outlet berbeda login/logout mandiri; gerbang penugasan kasir di pintu login (kasir outlet lain ditolak & diarahkan); pintu login kasir menolak slug tak dikenal (404)
+- [x] **Tahap 3** — laporan & perapihan (diuji 22 Okt 2026: omzet "Semua Outlet" = jumlah outlet-a + outlet-b; grafik & 5 Menu Terlaris ikut pemilih; kolom Tanggal & Jam + Outlet di tabel pesanan; riwayat 25/halaman + tombol halaman; README bagian URL & outlet; pembersihan revalidatePath ke jalur dinamis)
+
+**Roadmap multi-outlet TAMAT** — seluruh tahap selesai & teruji.

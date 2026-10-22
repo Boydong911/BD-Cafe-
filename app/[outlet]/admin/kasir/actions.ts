@@ -101,7 +101,7 @@ export async function updateOrderStatus(
 
   if (error) return { success: false, error: "Gagal memperbarui status." };
 
-  revalidatePath("/admin/kasir");
+  revalidatePath("/[outlet]/admin/kasir", "page");
   revalidatePath("/[outlet]/admin/kasir", "page");
   return { success: true };
 }
@@ -230,7 +230,7 @@ export async function confirmPayment(
     console.error("[kasir] update status ready gagal:", statusError.message);
   }
 
-  revalidatePath("/admin/kasir");
+  revalidatePath("/[outlet]/admin/kasir", "page");
   revalidatePath("/admin/owner");
   revalidatePath("/admin/owner/penjualan");
   revalidatePath("/[outlet]/admin/kasir", "page");
@@ -346,7 +346,7 @@ export async function completeOrder(orderId: string): Promise<ActionResult> {
     return { success: false, error: "Gagal menyelesaikan pesanan." };
   }
 
-  revalidatePath("/admin/kasir");
+  revalidatePath("/[outlet]/admin/kasir", "page");
   revalidatePath("/admin/owner");
   revalidatePath("/admin/owner/penjualan");
   revalidatePath("/[outlet]/admin/kasir", "page");
