@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { Wifi, Plug, Snowflake, Users, Music, Car } from "lucide-react";
 import { PageShell } from "@/components/customer/page-shell";
 
-export const metadata: Metadata = { title: "Facility - BD Cafe" };
+export const metadata: Metadata = {
+  title: "Facility",
+  description:
+    "Fasilitas BD Cafe: WiFi kencang, colokan nyaring, indoor ber-AC, ruang meeting, dan parkir luas.",
+};
 
 /*
  * Daftar fasilitas. Jam live acoustic & soal parkir ini masih dugaan —

@@ -29,7 +29,8 @@ export const metadata: Metadata = {
     default: SITE_NAME,
     template: TITLE_TEMPLATE,
   },
-  description: "Cafe premium — kopi, kenyamanan, cita rasa.",
+  description:
+    "Kedai kopi BD Cafe di Batam — racikan kopi pilihan, suasana hangat, dan pelayanan yang bikin betah. Dine-in atau bawa pulang, sama nikmatnya.",
 };
 
 export default function RootLayout({

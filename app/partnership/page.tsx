@@ -3,7 +3,11 @@ import { ShoppingBag, Calendar, Handshake, MessageCircle } from "lucide-react";
 import { PageShell } from "@/components/customer/page-shell";
 import { SITE_WA } from "@/lib/site-links";
 
-export const metadata: Metadata = { title: "Partnership - BD Cafe" };
+export const metadata: Metadata = {
+  title: "Partnership",
+  description:
+    "Kerja sama bersama BD Cafe: pesanan besar & katering, private event, sampai kolaborasi komunitas.",
+};
 
 /*
  * Tiga bentuk kerja sama yang paling sering diminta kedai kopi. Model lain

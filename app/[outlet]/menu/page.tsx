@@ -39,6 +39,7 @@ export async function generateMetadata({
     title: tabel
       ? `${tabel} - ${outlet.nama}`
       : `Menu Outlet ${outlet.nama}`,
+    description: `Menu kopi & makanan ${outlet.nama} — harga & stok terbaru langsung dari kedai.`,
   };
 }
 

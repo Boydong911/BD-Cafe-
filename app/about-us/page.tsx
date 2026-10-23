@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { Coffee, Users, Wallet, HeartHandshake } from "lucide-react";
 import { PageShell } from "@/components/customer/page-shell";
 
-export const metadata: Metadata = { title: "About Us - BD Cafe" };
+export const metadata: Metadata = {
+  title: "About Us",
+  description:
+    "Cerita dan nilai yang kami pegang — kedai kopi yang serius soal rasa dan kenyamanan.",
+};
 
 /*
  * Empat nilai yang kami pegang. Isinya draf — silakan koreksi jika kalimatnya

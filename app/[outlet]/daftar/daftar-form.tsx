@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, ArrowLeft, CheckCircle2, UserPlus } from "lucide-react";
+import { LoginShell } from "@/components/auth/login-shell";
 
 const initialState: DaftarState = {};
 
@@ -40,17 +41,23 @@ export default function DaftarForm({ outletSlug }: { outletSlug: string }) {
   const [state, formAction] = useActionState(daftarAction, initialState);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-10">
-      <Card className="w-full max-w-sm">
+    <LoginShell>
+      <Card className="w-full rounded-2xl shadow-2xl">
         <CardHeader>
-          <div className="mb-1 flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-accent" />
-            <CardTitle>Daftar Karyawan Baru</CardTitle>
+          <div className="mb-1 flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
+              <UserPlus className="h-5 w-5" />
+            </span>
+            <div>
+              <CardTitle className="font-serif text-xl">
+                Daftar Karyawan Baru
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Daftar sebagai kasir outlet <b>/{outletSlug}</b>. Akun langsung
+                aktif dan kamu langsung masuk ke dashboard kasir.
+              </CardDescription>
+            </div>
           </div>
-          <CardDescription>
-            Daftar sebagai kasir outlet <b>/{outletSlug}</b>. Isi data di bawah.
-            Akun langsung aktif dan kamu langsung masuk ke dashboard kasir.
-          </CardDescription>
         </CardHeader>
 
         <CardContent>
@@ -130,6 +137,6 @@ export default function DaftarForm({ outletSlug }: { outletSlug: string }) {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </LoginShell>
   );
 }

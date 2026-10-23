@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, UserPlus, Store, ShieldAlert } from "lucide-react";
+import { LoginShell } from "@/components/auth/login-shell";
 
 const initialState: LoginState = {};
 
@@ -43,14 +44,20 @@ export default function KasirLoginForm({
   const [state, formAction] = useActionState(kasirLoginAction, initialState);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-10">
-      <Card className="w-full max-w-sm">
+    <LoginShell>
+      <Card className="w-full rounded-2xl shadow-2xl">
         <CardHeader>
-          <div className="mb-1 flex items-center gap-2">
-            <Store className="h-5 w-5 text-accent" />
-            <CardTitle>Login Kasir</CardTitle>
+          <div className="mb-1 flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
+              <Store className="h-5 w-5" />
+            </span>
+            <div>
+              <CardTitle className="font-serif text-xl">Login Kasir</CardTitle>
+              <CardDescription className="text-sm">
+                Masuk untuk memproses pesanan.
+              </CardDescription>
+            </div>
           </div>
-          <CardDescription>Masuk untuk memproses pesanan.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={formAction} className="space-y-4">
@@ -102,6 +109,6 @@ export default function KasirLoginForm({
           </div>
         </CardContent>
       </Card>
-    </div>
+    </LoginShell>
   );
 }

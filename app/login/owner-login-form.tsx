@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, ShieldCheck } from "lucide-react";
+import { LoginShell } from "@/components/auth/login-shell";
 
 const initialState: LoginState = {};
 
@@ -31,14 +32,20 @@ export default function OwnerLoginForm() {
   const [state, formAction] = useActionState(ownerLoginAction, initialState);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-10">
-      <Card className="w-full max-w-sm">
+    <LoginShell>
+      <Card className="w-full rounded-2xl shadow-2xl">
         <CardHeader>
-          <div className="mb-1 flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-accent" />
-            <CardTitle>Login Owner</CardTitle>
+          <div className="mb-1 flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
+              <ShieldCheck className="h-5 w-5" />
+            </span>
+            <div>
+              <CardTitle className="font-serif text-xl">Login Owner</CardTitle>
+              <CardDescription className="text-sm">
+                Khusus pemilik BD Cafe.
+              </CardDescription>
+            </div>
           </div>
-          <CardDescription>Khusus pemilik BD Cafe.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={formAction} className="space-y-4">
@@ -74,6 +81,6 @@ export default function OwnerLoginForm() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </LoginShell>
   );
 }

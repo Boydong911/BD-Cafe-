@@ -6,7 +6,11 @@ import { fetchOutlets, type OutletRow } from "@/lib/outlets";
 import { outletMenuHref } from "@/lib/outlet-routes";
 import { formatWibDate } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Our Outlet - BD Cafe" };
+export const metadata: Metadata = {
+  title: "Our Outlet",
+  description:
+    "Daftar outlet BD Cafe — pilih outlet terdekat dan langsung lihat menunya.",
+};
 export const revalidate = 0; // daftar outlet selalu termutakhirkan
 
 const MENU_MODE_LABEL: Record<OutletRow["menu_mode"], string> = {

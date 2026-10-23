@@ -3,7 +3,11 @@ import { MapPin, Clock, MessageCircle, ExternalLink } from "lucide-react";
 import { PageShell } from "@/components/customer/page-shell";
 import { SITE_ADDRESS, SITE_HOURS, SITE_WA } from "@/lib/site-links";
 
-export const metadata: Metadata = { title: "Contact - BD Cafe" };
+export const metadata: Metadata = {
+  title: "Contact",
+  description:
+    "Hubungi BD Cafe: alamat, jam buka, dan WhatsApp untuk bertanya sebelum mampir.",
+};
 
 /** Link pencarian Google Maps memakai alamat yang sama dengan sumber sentral. */
 const mapsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(

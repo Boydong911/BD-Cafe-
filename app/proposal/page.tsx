@@ -3,7 +3,11 @@ import { Send } from "lucide-react";
 import { PageShell } from "@/components/customer/page-shell";
 import { SITE_WA } from "@/lib/site-links";
 
-export const metadata: Metadata = { title: "Proposal - BD Cafe" };
+export const metadata: Metadata = {
+  title: "Proposal",
+  description:
+    "Alur pengajuan proposal kerja sama ke BD Cafe — cukup mulai lewat WhatsApp.",
+};
 
 /** WhatsApp dengan pesan awal yang sudah terisi, biar nggak kosong. */
 const waProposalHref = `${SITE_WA.url}?text=${encodeURIComponent(
