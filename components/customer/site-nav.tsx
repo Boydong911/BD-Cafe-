@@ -7,28 +7,13 @@ import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PUSAT_SLUG } from "@/lib/outlet-routes";
+import { sitePageLinks } from "@/lib/site-links";
 
-/*
- * Item nav. `href` kosong berarti belum ada tujuan -- sengaja tidak dibuat
- * halaman kosong untuk masing-masing, karena itu hanya menambah file tanpa
- * isi. Isi `href` begitu halaman untuk item tersebut dibuat.
- *
- * "Our Menu" mengikuti outlet halaman yang sedang dibuka: di /outlet-b
- * menuju /outlet-b/menu. Halaman tanpa konteks outlet (landing) memakai
- * outlet pusat.
+/**
+ * Daftar item nav SATU SUMBER di lib/site-links.ts — yang sama dipakai
+ * footer. `href` null berarti belum ada tujuan: sengaja tidak dibuat halaman
+ * kosong, tampil sebagai teks kusam, bukan link 404.
  */
-function navItems(outletSlug: string) {
-  return [
-    { label: "Home", href: "/" },
-    { label: "About Us", href: "" },
-    { label: "Our Menu", href: `/${outletSlug}/menu` },
-    { label: "Our Outlet", href: "" },
-    { label: "Facility", href: "" },
-    { label: "Partnership", href: "" },
-    { label: "Proposal", href: "" },
-    { label: "Contact", href: "" },
-  ];
-}
 
 /**
  * Navbar BD Cafe.
@@ -52,7 +37,7 @@ export function SiteNav({
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const NAV_ITEMS = navItems(outletSlug);
+  const NAV_ITEMS = sitePageLinks(outletSlug);
 
   /*
    * Item aktif mengikuti halaman yang sedang dibuka, bukan ditulis manual.
@@ -140,7 +125,7 @@ export function SiteNav({
       </div>
 
       {open && (
-        <nav className="border-t border-white/10 bg-black/90 px-5 py-3 text-white backdrop-blur lg:hidden">
+        <nav className="mt-2 border-t border-white/10 bg-black/90 px-5 py-3 text-white backdrop-blur lg:hidden">
           {NAV_ITEMS.map((item) =>
             item.href ? (
               <Link

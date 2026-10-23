@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { HeroSection } from "@/components/customer/hero-section";
+import { SiteFooter } from "@/components/customer/site-footer";
 import { TableSessionSync } from "@/components/customer/table-session-sync";
 import { createClient } from "@/lib/supabase/server";
 import type { ShowcaseMenuItem } from "@/components/customer/menu-showcase-slider";
@@ -96,6 +97,7 @@ export default async function HomePage() {
       <main>
         <HeroSection menuItems={menuItems} />
       </main>
+      <SiteFooter />
     </>
   );
 }

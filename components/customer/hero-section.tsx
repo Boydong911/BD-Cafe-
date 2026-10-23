@@ -22,7 +22,7 @@ export function HeroSection({ menuItems }: { menuItems: ShowcaseMenuItem[] }) {
       <div className="pointer-events-none absolute inset-0 opacity-[0.05] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:24px_24px]" />
 
       {/* KIRI — Logo, judul, deskripsi, info */}
-      <div className="relative z-10 flex flex-1 flex-col justify-center px-6 pb-16 pt-24 sm:px-10 lg:px-16 lg:pt-16">
+      <div className="relative z-10 flex flex-1 flex-col justify-center px-6 pb-16 pt-32 sm:px-10 lg:px-16 lg:pt-32">
         <Image
           src="/logo-hero-white.png"
           alt="BD Cafe"
@@ -68,7 +68,7 @@ export function HeroSection({ menuItems }: { menuItems: ShowcaseMenuItem[] }) {
       </div>
 
       {/* KANAN — Kartu foto menu (3:4) */}
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-6 pb-12 pt-24 sm:px-6 lg:px-16 lg:pt-16">
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-6 pb-12 pt-24 sm:px-6 lg:px-16 lg:pt-32">
         <MenuShowcaseSlider items={menuItems} />
 
         <Button

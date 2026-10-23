@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { MenuCatalog } from "@/components/customer/menu-catalog";
 import { CartSheet } from "@/components/customer/cart-sheet";
 import { SiteNav } from "@/components/customer/site-nav";
+import { SiteFooter } from "@/components/customer/site-footer";
 import { TableSessionSync } from "@/components/customer/table-session-sync";
 import { fetchMenuCatalog } from "@/lib/categories";
 import { fetchOutletBySlug } from "@/lib/outlets";
@@ -142,6 +143,13 @@ export default async function OutletMenuPage({
           />
         )}
       </div>
+
+      {/*
+        Footer hanya untuk menu KATALOG (tanpa ?table=). Pelanggan yang datang
+        dari QR meja sedang dalam mode pesan-cepat; footer hanya menambah
+        scroll panjang yang tidak perlu.
+      */}
+      {!table && <SiteFooter />}
 
       {/*
         Tombol keranjang mengambang hanya saat ada meja. Di menu polos
