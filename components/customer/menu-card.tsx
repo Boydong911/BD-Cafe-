@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useCart, type SelectedCustomization } from "@/lib/cart/cart-context";
 import type { CustomizationGroup } from "@/types/menu";
 import { outletMenuDetailHref } from "@/lib/outlet-routes";
+import { rupiah } from "@/lib/format";
 
 export type MenuCardItem = {
   id: string;
@@ -62,7 +63,7 @@ export function MenuCard({
   return (
     <div className={WRAP}>
       <MenuCardTop item={item} href={href} />
-      {canOrder && <MenuCardControls item={item} />}
+      {canOrder && <MenuCardControls item={item} showPrice={tableParam !== null} />}
     </div>
   );
 }
@@ -123,15 +124,23 @@ function MenuCardTop({
 }
 
 /**
- * Kustomisasi + jumlah + tombol keranjang. Hanya muncul kalau kartu dibuka
- * lewat `?table=`.
+ * Kustomisasi + harga + jumlah + tombol keranjang. Hanya muncul kalau kartu
+ * dibuka lewat `?table=` (tombolnya) — harga berikutnya BOLEH muncul walau
+ * kartu tak bisa dipesan (kasir), itu ditentukan `showPrice`.
  *
  * Drink  : Gula (Non Sugar / Less Sugar / Sugar) dan Suhu (Ice / Hot)
  * Makanan: tidak ada tombol kustomisasi, cuma jumlah dan keranjang.
  *
  * Semua opsi ditampilkan, bukan dipotong, supaya tiga pilihan gula muat.
  */
-function MenuCardControls({ item }: { item: MenuCardItem }) {
+function MenuCardControls({
+  item,
+  showPrice,
+}: {
+  item: MenuCardItem;
+  /** Tampilkan harga unit (ikut nilai kustomisasi yang dipilih). */
+  showPrice: boolean;
+}) {
   const { addItem } = useCart();
   const [qty, setQty] = useState(1);
 
@@ -178,6 +187,12 @@ function MenuCardControls({ item }: { item: MenuCardItem }) {
 
   return (
     <>
+      {showPrice && (
+        <p className="px-3 pb-1 text-center text-sm font-bold text-primary tabular-nums">
+          {rupiah(unitPrice)}
+        </p>
+      )}
+
       {groups.length > 0 && (
         <div className="space-y-1.5 px-3 pb-1">
           {groups.map((g) => (

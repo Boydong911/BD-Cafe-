@@ -13,13 +13,6 @@ export type ShowcaseMenuItem = {
   imageUrl: string | null;
 };
 
-const formatPrice = (price: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(price);
-
 export function MenuShowcaseSlider({ items }: { items: ShowcaseMenuItem[] }) {
   const [index, setIndex] = useState(0);
 
@@ -70,9 +63,6 @@ export function MenuShowcaseSlider({ items }: { items: ShowcaseMenuItem[] }) {
           </h3>
           <p className="text-[11px] uppercase tracking-[0.15em] text-white/60">
             {current.category}
-          </p>
-            <p className="text-lg font-bold text-white">
-            {formatPrice(current.price)}
           </p>
         </div>
       </div>
