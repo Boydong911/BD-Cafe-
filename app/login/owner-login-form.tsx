@@ -54,7 +54,6 @@ export default function OwnerLoginForm() {
               <Input
                 id="username"
                 name="username"
-                placeholder="boy123"
                 autoComplete="username"
                 required
               />
