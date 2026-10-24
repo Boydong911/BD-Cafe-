@@ -7,8 +7,18 @@ import {
   ShoppingBag,
   Clock,
   CheckCircle2,
+  ChevronDown,
+  Download,
+  FileSpreadsheet,
+  FileText,
   History,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SalesChart } from "@/components/admin/sales-chart-lazy";
 import { SalesFilter } from "@/components/admin/sales-filter";
 import { StatCard } from "@/components/admin/stat-card";
@@ -85,11 +95,45 @@ export default async function OwnerSalesPage({
             {PERIOD_LABELS[period].toLowerCase()} · {scope.nama}.
           </p>
         </div>
-        <OutletPicker
-          allowSemua
-          outlets={outlets}
-          currentSlug={scope.slug}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <OutletPicker
+            allowSemua
+            outlets={outlets}
+            currentSlug={scope.slug}
+          />
+          {/*
+            Unduh: penawaran dua format dari satu tombol — mengambil
+            transaksi pada rentang & outlet yang SEDANG dipilih, barisnya
+            sama seperti tabel tapi seluruh halaman (bukan 25).
+          */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="h-4 w-4" />
+                Unduh
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <a
+                  href={`/admin/owner/penjualan/export?range=${preset}&outlet=${scope.slug}`}
+                >
+                  <FileText />
+                  Format CSV — bisa dibuka Excel
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href={`/admin/owner/penjualan/export?range=${preset}&outlet=${scope.slug}&format=xlsx`}
+                >
+                  <FileSpreadsheet />
+                  Format Excel (.xlsx)
+                </a>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <SalesFilter preset={preset} period={period} />

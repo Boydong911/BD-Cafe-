@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronDown, Download, FileSpreadsheet, FileText } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { OrderListTable } from "@/components/admin/order-list-table";
 import { OutletPicker } from "@/components/admin/outlet-picker";
 import { Button } from "@/components/ui/button";
@@ -82,6 +88,32 @@ export default async function RiwayatTransaksiPage({
             currentSlug={slug}
             hrefBase="/admin/owner/penjualan/riwayat-transaksi"
           />
+          {/* Unduh: penawaran dua format dari satu tombol — seluruh sejarah. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="h-4 w-4" />
+                Unduh
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <a href={`/admin/owner/penjualan/export?range=semua&outlet=${slug}`}>
+                  <FileText />
+                  Format CSV — bisa dibuka Excel
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href={`/admin/owner/penjualan/export?range=semua&outlet=${slug}&format=xlsx`}
+                >
+                  <FileSpreadsheet />
+                  Format Excel (.xlsx)
+                </a>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" asChild>
             <Link href={`/admin/owner/penjualan?outlet=${slug}`}>
               <ArrowLeft className="h-4 w-4" />
