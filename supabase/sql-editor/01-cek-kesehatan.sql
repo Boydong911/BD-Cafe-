@@ -43,7 +43,7 @@ from public.get_top_menu(now() - interval '90 days', now(), 5);
 -- A4) Verifikasi laporan WIB, bukan UTC.
 --     WAJIB: jam_utc = 17 (bukan 0). Kalau 0, bucket bergeser 7 jam —
 --     artinya fungsi laporan versi lama (sebelum migrasi WIB) yang
---     tertancap; jalankan ulang bagian [8/17] di 02-install? TIDAK —
+--     tertancap; jalankan ulang bagian [8/17] di installer? TIDAK —
 --     di database yang sudah jalan, perbaiki dengan migrasi baru
 --     (lihat 00-PROSEDUR.md, aturan "perbaikan = file baru").
 select

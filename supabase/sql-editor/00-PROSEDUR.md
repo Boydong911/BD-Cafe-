@@ -5,7 +5,8 @@ Database (tabel, index, fungsi), Auth (akun, login), dan Keamanan (RLS, policy).
 
 Perubahan database ke depan ditulis sebagai file baru di `supabase/migrations/`
 (aturannya di bagian 4). Folder ini menyimpan: prosedur, diagnosa, dan
-skema dasar beku 20 Okt 2026.
+installer database baru (`02-install-database-lengkap.sql`, satu file
+berisi SEMUANYA).
 
 Server aplikasi Next.js **tidak pernah diutak-atik** untuk urusan database —
 semua perubahan database ditempel langsung di Supabase Dashboard → **SQL Editor**.
@@ -17,8 +18,12 @@ semua perubahan database ditempel langsung di Supabase Dashboard → **SQL Edito
 | File | Buat apa | Kapan boleh jalan |
 |---|---|---|
 | `01-cek-kesehatan.sql` | Semua diagnosa (dashboard, akun, login 500). Seluruhnya `SELECT`, tidak mengubah apa pun | **Kapan saja** (bisa dijalankan berulang, 100% aman) |
-| `02-install-database-baru.sql` | Perintah SKEMA lengkap: gabungan 17 file asli (schema + storage + 15 migrasi) dalam urutan pemasangan. Isinya DIBEKUKAN pada 20 Okt 2026 | **HANYA database baru yang kosong** — setelahnya lanjut file `../migrations/` bertanggal sesudah 20 Okt, urut nama. Di database yang sudah berjalan: TIDAK BOLEH |
-| `../migrations/2026MMDD-*.sql` | Perubahan database berikutnya: satu perubahan = satu file di `supabase/migrations/` (lihat bagian 4) | Sesuai isinya — biasanya sekali jalan, tidak diulang |
+| `02-install-database-lengkap.sql` | **SATU FILE INSTALL untuk database baru**: BAGIAN 1 = beku 20 Okt (17 file asli digabung), BAGIAN 2.. = seluruh migrasi setelah beku, urut tanggal | **HANYA database baru yang kosong**. Di database yang sudah berjalan: TIDAK BOLEH |
+| `../migrations/2026MMDD-*.sql` | Perubahan database berikutnya: satu perubahan = satu file di `supabase/migrations/` (lihat bagian 4). Setiap migrasi yang jalan WAJIB diikutkan ke installer (leburkan manual — cara ada di bagian 4) | Sesuai isinya — biasanya sekali jalan, tidak diulang |
+
+Tambalan lama (bekuan 20 Okt, dulu bernama `02-install-database-baru.sql`)
+tidak lagi jadi file sendiri — isinya tinggal sebagai BAGIAN 1 di dalam
+installer; menoleh versi aslinya lewat riwayat git.
 
 ---
 
@@ -55,9 +60,10 @@ Langkah di SQL Editor:
 - Tabel & fungsi = milik `public.*`. Kalau perintah `create table ...` gagal
   karena "already exists", itu tanda file ditempel pada database yang SALAH
   (sudah terisi) — bukan alasan memaksa `drop` yang lama.
-- Semua migrasi lama sudah **terpasang dan menjadi bagian dari
-  `02-install-database-baru.sql`**. Di database yang sedang jalan,
-  migrasi lama TIDAK diulang.
+- Semua migrasi yang pernah jalan kini tergabung dalam
+  **`02-install-database-lengkap.sql`** (BAGIAN 1 dasar beku + seluruh
+  file `../migrations/`). Di database yang sedang jalan, migrasi lama
+  TIDAK diulang.
 
 ### Auth (akun, login)
 - Tabel `auth.users`, `auth.identities`, dst. milik GoTrue. **Jangan pernah
@@ -104,10 +110,29 @@ Tiga tali pengaman supaya aman:
   rollback ke versi lampau di database yang sudah berubah bisa memasang
   ulang bug yang dulu sudah dibeneri (persis kasus 19 Okt).
 
-`02-install-database-baru.sql` TIDAK di-update setiap ada perubahan —
-isinya dibekukan per 20 Okt 2026. Membangun database baru dari nol =
-tempel file itu dulu, lalu jalankan file-file `../migrations/` yang
-bertanggal sesudah 20 Okt, urut nama file.
+`02-install-database-baru.sql` (beku per 20 Okt) sudah pensiun sebagai
+file sendiri — isinya tinggal BAGIAN 1 dari installer, dan file migrasi
+yang sudah dijalankan dihapus dari folder (aslinya tetap terbaca di
+riwayat git bila perlu menoleh).
+
+`02-install-database-lengkap.sql` = SATU file yang dipakai membangun
+database baru: paste semuanya, selesai. Jadi setiap migrasi baru yang
+sudah menjalankan di database aktif, LEBURKAN ke installer supaya file
+itu tetap "semuanya":
+
+1. Buka installer, naik ke kolom paling bawah, tulis banner bagian baru:
+   ```
+   -- ============================================================================
+   -- [BAGIAN <n>/<total>] MIGRASI — asal: migrations/<nama-file>.sql
+   -- ============================================================================
+
+   ```
+   (isi file migrasinya ditempel persis di bawah banner itu.)
+2. Perbarui daftar "Isi" di header (tambah satu baris `--   [n] <nama migrasi>`)
+   dan baris "Terakhir diperbarui".
+
+Jangan mengubah isi bagian yang sudah ada — installer itu fotokopi
+bertambah, bukan berkas yang ditulis-ulang.
 
 ---
 
@@ -133,4 +158,7 @@ tapi tak lagi perlu.
 
 ---
 
-*Koreksi terakhir: 20 Okt 2026 — folder sql-editor dibuat bersama Ponytail.*
+*Koreksi terakhir: 24 Okt 2026 — installer jadi SATU FILE
+(02-install-database-lengkap.sql; bekuan jadi BAGIAN 1; file migrasi
+lama & script perakitnya dihapus, aturan peleburan manual menggantikan)
+— dibuat bersama Ponytail.*

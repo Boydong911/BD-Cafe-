@@ -13,11 +13,11 @@ Lalu copy-kan semua file di paket ini ke dalam project (`app/`, `lib/`, `middlew
 
 ## 2. Setup Supabase
 1. Buat project baru di https://supabase.com.
-2. Buka **SQL Editor**, jalankan `supabase/sql-editor/02-install-database-baru.sql`
-   — satu tempel, berisi skema + policies + seluruh migrasi dalam urutan
-   pemasangannya. Prosedur rinci dan aturan amannya ada di
-   `supabase/sql-editor/00-PROSEDUR.md`; hasil instal dicek dengan
-   `supabase/sql-editor/01-cek-kesehatan.sql`.
+2. Buka **SQL Editor**, jalankan `supabase/sql-editor/02-install-database-lengkap.sql`
+   — SATU tempel, berisi seluruh skema + policies + SELURUH migrasi dalam
+   urutan pemasangannya (termasuk yang memperbaiki bagian lama). Prosedur
+   rinci dan aturan amannya ada di `supabase/sql-editor/00-PROSEDUR.md`;
+   hasil instal dicek dengan `supabase/sql-editor/01-cek-kesehatan.sql`.
 3. Buat `.env.local` berisi dua baris berikut (dari Settings > API):
    - `NEXT_PUBLIC_SUPABASE_URL=...` (URL project)
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY=...` (publik, aman untuk client)

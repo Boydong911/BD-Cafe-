@@ -19,7 +19,15 @@ Aturan main:
    database yang sudah berubah bisa memasang ulang bug (kasus 19 Okt).
 6. Prosedur menjalankan & diagnosa tetap di `../sql-editor/`:
    `00-PROSEDUR.md` dan `01-cek-kesehatan.sql`.
+7. Setiap migrasi baru yang sudah dijalankan di project aktif WAJIB diikutkan
+   ke installer `../sql-editor/02-install-database-lengkap.sql` — leburkan
+   manual sebagai BAGIAN baru paling bawah + perbarui header-nya (langkah
+   rinci: bagian 4 `../sql-editor/00-PROSEDUR.md`). Prinsipnya: siapapun
+   yang install tinggal paste SATU file, tidak perlu mengejar file migrasi
+   satu per satu. Setelah melebur, file migrasi di folder ini boleh
+   dihapus (isinya aman di installer & riwayat git) supaya folder bersih.
 
-Riwayat 15-19 Okt 2026 (15 migrasi terpasang + 12 rollback) mencair ke
-`../sql-editor/02-install-database-baru.sql`; file aslinya masih ada di
-riwayat git bila perlu menoleh.
+Riwayat 15-19 Okt 2026 (15 migrasi terpasang + 12 rollback) melebur ke
+bekuan `02-install-database-baru.sql`; bekuan itu kini JADI BAGIAN 1 dari
+`../sql-editor/02-install-database-lengkap.sql` (file bekuan sendiri
+dihapus; aslinya di riwayat git).
